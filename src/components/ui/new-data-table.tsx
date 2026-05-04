@@ -160,13 +160,18 @@ export function DataTable<TData, TValue>({
   const [rowSelection, setRowSelection] = React.useState({});
 
   // Trigger onSelectionChange when rowSelection updates
+  const lastSelectionRef = React.useRef<string>("");
+
   React.useEffect(() => {
     if (onSelectionChange) {
-      // rowSelection is a map of index/id to boolean
-      // We need to map it back to the data
       const selectedIndices = Object.keys(rowSelection).filter(
         (key) => rowSelection[key as keyof typeof rowSelection],
       );
+      
+      const currentSelectionIds = selectedIndices.join(",");
+      if (currentSelectionIds === lastSelectionRef.current) return;
+      lastSelectionRef.current = currentSelectionIds;
+
       const selectedData = selectedIndices
         .map((index) => data[parseInt(index)])
         .filter(Boolean);
