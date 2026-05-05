@@ -9,10 +9,12 @@ const COOKIE_NAME = "vos_access_token";
 
 /**
  * GET /api/ic/document-transmittal
- * Fetches the master list of document transmittals.
+ * Fetches the master list of document transmittals with server-side filtering.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
+        const { searchParams } = new URL(req.url);
+        
         const cookieStore = await cookies();
         const token = cookieStore.get(COOKIE_NAME)?.value;
 
@@ -24,12 +26,19 @@ export async function GET() {
         }
 
         const payload = decodeJwtPayload(token);
-        console.log("[API] Decoded JWT Payload:", JSON.stringify(payload, null, 2));
-        
         const userId = payload?.sub ? parseInt(payload.sub) : undefined;
-        console.log("[API] Parsed User ID:", userId);
 
-        const data = await DocumentTransmittalService.getTransmittalList(userId);
+        // Parse Filters from Query
+        const filters = {
+            receiverId: userId,
+            senderId: searchParams.get("senderId"),
+            selectedReceiverId: searchParams.get("receiverId"),
+            status: searchParams.get("status"),
+            dateFrom: searchParams.get("dateFrom"),
+            dateTo: searchParams.get("dateTo"),
+        };
+
+        const data = await DocumentTransmittalService.getTransmittalList(filters);
         return NextResponse.json({ success: true, data });
 
     } catch (error) {

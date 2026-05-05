@@ -78,6 +78,8 @@ export type TransmittalStatus = "Pending" | "Partially Received" | "Fully Receiv
 export interface DocumentTransmittalListItem {
     id: number;
     documentTransmittalNo: string;
+    senderId: number | null;
+    receiverId: number | null;
     senderName: string;
     receiverName: string;
     createdAt: string | null;
