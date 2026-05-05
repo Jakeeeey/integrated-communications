@@ -11,9 +11,8 @@ import {
 import { DataTable } from "@/components/ui/new-data-table";
 import { getTransmittalDetailColumns } from "@/modules/integrated-communications/document-transmittal/components/TransmittalDetailColumns";
 import { DocumentTransmittalHeader, DocumentTransmittalDetail, TransmittalStatus } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.types";
-import { StatusBadge, StatusTone } from "@/components/ui/status-badge";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatDateTime, cn } from "@/lib/utils";
 import { FileText, User, Calendar, CheckSquare, Loader2 } from "lucide-react";
@@ -60,10 +59,6 @@ export const TransmittalDetailModal = ({
     const acknowledgedCount = details.filter(d => d.receivedAt !== null).length;
     const isFullyAcknowledged = totalInvoices > 0 && acknowledgedCount === totalInvoices;
 
-    let tone: StatusTone = "neutral";
-    if (status === "Fully Received") tone = "success";
-    else if (status === "Partially Received") tone = "info";
-    else if (status === "Pending") tone = "warning";
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -80,7 +75,14 @@ export const TransmittalDetailModal = ({
                                     <Calendar className="h-4 w-4" />
                                     {header?.createdAt ? formatDateTime(new Date(header.createdAt)) : "—"}
                                 </div>
-                                <StatusBadge tone={tone}>{status || "Unknown"}</StatusBadge>
+                                {(() => {
+                                    let variant: "destructive" | "secondary" | "default" | "outline" = "outline";
+                                    if (status === "Pending") variant = "destructive";
+                                    else if (status === "Partially Received") variant = "secondary";
+                                    else if (status === "Fully Received") variant = "default";
+                                    
+                                    return <Badge variant={variant}>{status || "Unknown"}</Badge>;
+                                })()}
                             </div>
                         </div>
                     </div>

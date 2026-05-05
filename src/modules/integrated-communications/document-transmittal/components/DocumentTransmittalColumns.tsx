@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DataTableColumnHeader } from "./DataTableColumnHeader";
-import { Eye } from "lucide-react";
 
 /**
  * Column definitions for the Document Transmittal master list table.
