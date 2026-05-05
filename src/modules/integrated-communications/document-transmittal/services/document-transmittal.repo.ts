@@ -184,4 +184,108 @@ export class DocumentTransmittalRepo {
             }),
         });
     }
+    /**
+     * Creates a new document transmittal header.
+     * Used when splitting a transmittal to reassign receipts to a different user.
+     */
+    static async createHeader(data: { sender_id: number; receiver_id: number; document_transmittal_no: string | null }) {
+        const url = `${API_BASE_URL}/items/document_transmittal_header`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${STATIC_TOKEN}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(`REPO_ERROR: ${(err as Record<string, string>).message || "Failed to create header"}`);
+        }
+
+        return await response.json();
+    }
+
+    /**
+     * Batch-updates detail rows to point to a new header ID.
+     * Used when reassigning selected receipts.
+     */
+    static async reassignDetails(detailIds: number[], newHeaderId: number) {
+        const url = `${API_BASE_URL}/items/document_transmittal_details`;
+
+        const response = await fetch(url, {
+            method: "PATCH",
+            headers: {
+                "Authorization": `Bearer ${STATIC_TOKEN}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                keys: detailIds,
+                data: {
+                    document_transmittal_id: newHeaderId,
+                },
+            }),
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(`REPO_ERROR: ${(err as Record<string, string>).message || "Failed to reassign details"}`);
+        }
+
+        return await response.json();
+    }
+
+    /**
+     * Fetches all pending transmittal details.
+     * Optionally filtered by a specific receiver.
+     */
+    static async fetchPendingDetails(receiverId?: number) {
+        const fields = [
+            "id",
+            "receivedAt",
+            "document_transmittal_id.id",
+            "document_transmittal_id.document_transmittal_no",
+            "invoice_id.invoice_id",
+            "invoice_id.invoice_no",
+            "invoice_id.net_amount",
+            "invoice_id.customer_code"
+        ].join(",");
+
+        let url = `${API_BASE_URL}/items/document_transmittal_details?fields=${fields}&filter[receivedAt][_null]=true&limit=-1`;
+        
+        if (receiverId) {
+            url += `&filter[document_transmittal_id][receiver_id][_eq]=${receiverId}`;
+        }
+
+        const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${STATIC_TOKEN}` },
+            cache: "no-store",
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch pending details: ${response.statusText}`);
+        }
+
+        return response.json();
+    }
+
+    /**
+     * Fetches all users from the user table.
+     */
+    static async fetchAllUsers() {
+        const url = `${API_BASE_URL}/items/user?fields=user_id,user_fname,user_lname&limit=-1&sort=user_fname`;
+
+        const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${STATIC_TOKEN}` },
+            cache: "no-store",
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch users: ${response.statusText}`);
+        }
+
+        return response.json();
+    }
 }

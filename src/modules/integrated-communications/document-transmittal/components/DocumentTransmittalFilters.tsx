@@ -111,8 +111,6 @@ export function DocumentTransmittalFilters({
         </PopoverContent>
       </Popover>
 
-      <Separator orientation="vertical" className="h-5" />
-
       {/* Sender */}
       <Combobox
         options={[{ value: "", label: "All senders" }, ...availableSenders]}

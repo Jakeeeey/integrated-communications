@@ -5,10 +5,11 @@ import { useDocumentTransmittal } from "@/modules/integrated-communications/docu
 import { DataTable } from "@/components/ui/new-data-table";
 import { getDocumentTransmittalColumns } from "@/modules/integrated-communications/document-transmittal/components/DocumentTransmittalColumns";
 import { TransmittalDetailModal } from "@/modules/integrated-communications/document-transmittal/components/TransmittalDetailModal";
-import { RefreshCcw, AlertCircle } from "lucide-react";
+import { RefreshCcw, AlertCircle, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DocumentTransmittalFilters } from "@/modules/integrated-communications/document-transmittal/components/DocumentTransmittalFilters";
+import { BulkAcknowledgeModal } from "@/modules/integrated-communications/document-transmittal/components/BulkAcknowledgeModal";
 import { DocumentTransmittalFilterProvider } from "./context/DocumentTransmittalFilterContext";
 
 /**
@@ -28,10 +29,15 @@ function DocumentTransmittalContent() {
         isDetailLoading,
         isDetailModalOpen,
         setDetailModalOpen,
-        handleAcknowledge,
+        handleAcknowledgeWithUser,
         isAcknowledging,
+        handleBulkAcknowledge,
+        isBulkAcknowledging,
+        isBulkModalOpen,
+        setIsBulkModalOpen,
         availableSenders,
-        availableReceivers
+        availableReceivers,
+        allUsers
     } = useDocumentTransmittal();
 
     const columns = React.useMemo(() => getDocumentTransmittalColumns(fetchDetail), [fetchDetail]);
@@ -47,16 +53,27 @@ function DocumentTransmittalContent() {
                             <p className="text-sm text-muted-foreground">Manage and acknowledge transmittals for post-dispatch invoices.</p>
                         </div>
                     </div>
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => refresh()} 
-                        disabled={isLoading}
-                        className="gap-2 rounded-lg"
-                    >
-                        <RefreshCcw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-                        Refresh List
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button 
+                            variant="default" 
+                            size="sm" 
+                            onClick={() => setIsBulkModalOpen(true)}
+                            className="gap-2 rounded-lg font-bold shadow-sm"
+                        >
+                            <CheckSquare className="h-4 w-4" />
+                            Acknowledge
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => refresh()} 
+                            disabled={isLoading}
+                            className="gap-2 rounded-lg"
+                        >
+                            <RefreshCcw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+                            Refresh List
+                        </Button>
+                    </div>
                 </div>
             </div>
 
@@ -94,8 +111,18 @@ function DocumentTransmittalContent() {
                 details={selectedDetails}
                 status={transmittalStatus}
                 isLoading={isDetailLoading}
-                onAcknowledge={handleAcknowledge}
+                onAcknowledgeWithUser={handleAcknowledgeWithUser}
                 isAcknowledging={isAcknowledging}
+                availableUsers={allUsers}
+            />
+
+            {/* Global Bulk Acknowledge Modal */}
+            <BulkAcknowledgeModal
+                isOpen={isBulkModalOpen}
+                onOpenChange={setIsBulkModalOpen}
+                availableUsers={allUsers}
+                onBulkAcknowledge={handleBulkAcknowledge}
+                isAcknowledging={isBulkAcknowledging}
             />
         </div>
     );

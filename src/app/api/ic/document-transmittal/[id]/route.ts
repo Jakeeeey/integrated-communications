@@ -48,10 +48,6 @@ export async function PATCH(
         const searchParams = req.nextUrl.searchParams;
         const action = searchParams.get("action");
 
-        if (action !== "acknowledge") {
-            return NextResponse.json({ success: false, message: "Invalid action" }, { status: 400 });
-        }
-
         const cookieStore = await cookies();
         const token = cookieStore.get(COOKIE_NAME)?.value;
 
@@ -60,15 +56,22 @@ export async function PATCH(
         }
 
         const body = await req.json();
-        const { detailIds } = body;
 
-        const result = await DocumentTransmittalService.acknowledgeTransmittal(parseInt(id), detailIds);
-
-        if (result.success) {
-            return NextResponse.json(result);
-        } else {
+        if (action === "acknowledge") {
+            const { detailIds } = body;
+            const result = await DocumentTransmittalService.acknowledgeTransmittal(parseInt(id), detailIds);
+            if (result.success) return NextResponse.json(result);
             return NextResponse.json(result, { status: 400 });
         }
+
+        if (action === "reassign") {
+            const { detailIds, newUserId } = body;
+            const result = await DocumentTransmittalService.reassignTransmittal(parseInt(id), detailIds, newUserId);
+            if (result.success) return NextResponse.json(result);
+            return NextResponse.json(result, { status: 400 });
+        }
+
+        return NextResponse.json({ success: false, message: "Invalid action" }, { status: 400 });
 
     } catch (error) {
         console.error(`[API][DocumentTransmittal] PATCH Error:`, error);
