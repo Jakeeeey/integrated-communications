@@ -13,13 +13,23 @@ import { CheckCircle2, Clock } from "lucide-react";
 export const getTransmittalDetailColumns = (): ColumnDef<DocumentTransmittalDetail>[] => [
     {
         id: "select",
-        header: ({ table }) => (
-            <Checkbox
-                checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                aria-label="Select all"
-            />
-        ),
+        header: ({ table }) => {
+            const rows = table.getRowModel().rows;
+            const selectableRows = rows.filter(row => row.original.receivedAt === null);
+            const isAllSelected = selectableRows.length > 0 && selectableRows.every(row => row.getIsSelected());
+            const isSomeSelected = selectableRows.some(row => row.getIsSelected()) && !isAllSelected;
+
+            return (
+                <Checkbox
+                    checked={isAllSelected ? true : (isSomeSelected ? "indeterminate" : false)}
+                    onCheckedChange={(value) => {
+                        selectableRows.forEach(row => row.toggleSelected(!!value));
+                    }}
+                    disabled={selectableRows.length === 0}
+                    aria-label="Select all"
+                />
+            );
+        },
         cell: ({ row }) => (
             <Checkbox
                 checked={row.getIsSelected()}
