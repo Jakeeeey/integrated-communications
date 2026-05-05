@@ -2,15 +2,18 @@ import { DocumentTransmittalRepo } from "./document-transmittal.repo";
 import { 
     mapHeaderToListItem, 
     deriveTransmittalStatus,
-    formatUserFullName
+    formatUserFullName,
+    DirectusHeaderRaw,
+    DirectusDetailRaw
 } from "./document-transmittal.helpers";
 import { 
     AcknowledgeSchema 
 } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.schema";
 import { 
-    DocumentTransmittalListItem, 
     DocumentTransmittalHeader, 
-    DocumentTransmittalDetail 
+    DocumentTransmittalDetail, 
+    DocumentTransmittalListItem,
+    TransmittalStatus 
 } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.types";
 import { z } from "zod";
 
@@ -30,13 +33,13 @@ export class DocumentTransmittalService {
         receiverId?: number;
         senderId?: string | null;
         selectedReceiverId?: string | null;
-        status?: string | null;
+        status?: TransmittalStatus[];
         dateFrom?: string | null;
         dateTo?: string | null;
     }): Promise<DocumentTransmittalListItem[]> {
         try {
             const headerRes = await DocumentTransmittalRepo.fetchAllTransmittals(filters);
-            const rawHeaders = headerRes.data || [];
+            const rawHeaders: DirectusHeaderRaw[] = headerRes.data || [];
 
             // Fetch detail counts for the returned headers
             const allDetailsRes = await fetch(
@@ -58,13 +61,20 @@ export class DocumentTransmittalService {
                 }
             }
 
-            return rawHeaders.map((header: Record<string, unknown>) => 
+            const mappedTransmittals = rawHeaders.map((header: DirectusHeaderRaw) => 
                 mapHeaderToListItem(
-                    header as unknown as Parameters<typeof mapHeaderToListItem>[0],
-                    totalMap.get(header.id as number) || 0,
-                    ackMap.get(header.id as number) || 0,
+                    header,
+                    totalMap.get(header.id) || 0,
+                    ackMap.get(header.id) || 0,
                 )
             );
+
+            // Post-Fetch Filtering for Status (since status is derived, not a DB column)
+            if (filters.status && filters.status.length > 0) {
+                return mappedTransmittals.filter((t: DocumentTransmittalListItem) => filters.status!.includes(t.status));
+            }
+
+            return mappedTransmittals;
         } catch (error) {
             console.error("[DocumentTransmittalService] Error fetching list:", error);
             throw error;
@@ -82,8 +92,8 @@ export class DocumentTransmittalService {
                 DocumentTransmittalRepo.fetchDetailsByHeaderId(id),
             ]);
 
-            const rawHeader = headerRes.data;
-            const rawDetails: Array<Record<string, unknown>> = detailsRes.data || [];
+            const rawHeader: DirectusHeaderRaw | undefined = headerRes.data;
+            const rawDetails: DirectusDetailRaw[] = detailsRes.data || [];
 
             if (!rawHeader) throw new Error("Transmittal not found");
 
@@ -91,8 +101,8 @@ export class DocumentTransmittalService {
             const header: DocumentTransmittalHeader = {
                 id: rawHeader.id,
                 documentTransmittalNo: rawHeader.document_transmittal_no,
-                senderId: typeof rawHeader.sender_id === "object" && rawHeader.sender_id !== null ? rawHeader.sender_id.user_id : rawHeader.sender_id,
-                receiverId: typeof rawHeader.receiver_id === "object" && rawHeader.receiver_id !== null ? rawHeader.receiver_id.user_id : rawHeader.receiver_id,
+                senderId: (typeof rawHeader.sender_id === "object" && rawHeader.sender_id !== null ? rawHeader.sender_id.user_id : rawHeader.sender_id as number) || 0,
+                receiverId: (typeof rawHeader.receiver_id === "object" && rawHeader.receiver_id !== null ? rawHeader.receiver_id.user_id : rawHeader.receiver_id as number) || 0,
                 createdAt: rawHeader.createdAt,
                 receivedAt: rawHeader.receivedAt,
                 sender: typeof rawHeader.sender_id === "object" && rawHeader.sender_id !== null
@@ -106,10 +116,10 @@ export class DocumentTransmittalService {
             const details: DocumentTransmittalDetail[] = rawDetails.map((d) => {
                 const inv = d.invoice_id as Record<string, unknown> | null;
                 return {
-                    id: d.id as number,
-                    documentTransmittalId: d.document_transmittal_id as number,
+                    id: d.id,
+                    documentTransmittalId: d.document_transmittal_id,
                     invoiceId: inv ? (inv.invoice_id as number) : (d.invoice_id as number),
-                    receivedAt: d.receivedAt as string | null,
+                    receivedAt: d.receivedAt,
                     invoice: inv ? {
                         invoiceId: inv.invoice_id as number,
                         orderId: (inv.order_id as string) ?? null,

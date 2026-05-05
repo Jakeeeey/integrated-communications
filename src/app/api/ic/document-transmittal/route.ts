@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { DocumentTransmittalService } from "@/modules/integrated-communications/document-transmittal/services";
 import { decodeJwtPayload } from "@/lib/auth-utils";
+import { TransmittalStatus } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.types";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
             receiverId: userId,
             senderId: searchParams.get("senderId"),
             selectedReceiverId: searchParams.get("receiverId"),
-            status: searchParams.get("status"),
+            status: searchParams.getAll("status") as TransmittalStatus[],
             dateFrom: searchParams.get("dateFrom"),
             dateTo: searchParams.get("dateTo"),
         };

@@ -50,7 +50,12 @@ export const useDocumentTransmittal = () => {
             const params = new URLSearchParams();
             if (senderId) params.append("senderId", senderId);
             if (receiverId) params.append("receiverId", receiverId);
-            if (status !== "All") params.append("status", status);
+            
+            // Handle multiple statuses
+            if (status && status.length > 0) {
+                status.forEach(s => params.append("status", s));
+            }
+
             if (dateRange?.from) params.append("dateFrom", dateRange.from.toISOString());
             if (dateRange?.to) params.append("dateTo", dateRange.to.toISOString());
 
