@@ -97,10 +97,10 @@ export class DocumentTransmittalService {
                 receivedAt: rawHeader.receivedAt,
                 sender: typeof rawHeader.sender_id === "object" && rawHeader.sender_id !== null
                     ? { userId: rawHeader.sender_id.user_id, userFname: rawHeader.sender_id.user_fname, userMname: rawHeader.sender_id.user_mname, userLname: rawHeader.sender_id.user_lname }
-                    : { userId: 0, userFname: "Unknown", userMname: null, userLname: "" },
+                    : { userId: 0, userFname: "Not specified", userMname: null, userLname: "" },
                 receiver: typeof rawHeader.receiver_id === "object" && rawHeader.receiver_id !== null
                     ? { userId: rawHeader.receiver_id.user_id, userFname: rawHeader.receiver_id.user_fname, userMname: rawHeader.receiver_id.user_mname, userLname: rawHeader.receiver_id.user_lname }
-                    : { userId: 0, userFname: "Unknown", userMname: null, userLname: "" },
+                    : { userId: 0, userFname: "Not specified", userMname: null, userLname: "" },
             };
 
             const details: DocumentTransmittalDetail[] = rawDetails.map((d) => {

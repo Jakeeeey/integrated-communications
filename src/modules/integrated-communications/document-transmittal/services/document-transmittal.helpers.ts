@@ -42,7 +42,7 @@ interface DirectusDetailRaw {
  * Gracefully handles null/missing middle name and non-joined (numeric) FK values.
  */
 export function formatUserFullName(user: DirectusUserJoin | number | null): string {
-    if (!user || typeof user === "number") return "Unknown";
+    if (!user || typeof user === "number") return "Not specified";
     const parts = [user.user_fname, user.user_mname, user.user_lname];
     return parts
         .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
@@ -80,7 +80,7 @@ export function mapHeaderToListItem(
 
     return {
         id: header.id,
-        documentTransmittalNo: header.document_transmittal_no || "N/A",
+        documentTransmittalNo: header.document_transmittal_no || "-",
         senderId: getUserId(header.sender_id),
         receiverId: getUserId(header.receiver_id),
         senderName: formatUserFullName(header.sender_id as DirectusUserJoin | number | null),
