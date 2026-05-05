@@ -12,7 +12,7 @@ import {
  */
 
 /** Shape of a user object as returned by Directus FK join on sender_id / receiver_id */
-interface DirectusUserJoin {
+export interface DirectusUserJoin {
     user_id: number;
     user_fname: string;
     user_mname: string | null;
@@ -20,7 +20,7 @@ interface DirectusUserJoin {
 }
 
 /** Shape of a raw header as returned by the list query */
-interface DirectusHeaderRaw {
+export interface DirectusHeaderRaw {
     id: number;
     document_transmittal_no: string | null;
     sender_id: DirectusUserJoin | number | null;
@@ -30,7 +30,7 @@ interface DirectusHeaderRaw {
 }
 
 /** Shape of a raw detail as returned by Directus */
-interface DirectusDetailRaw {
+export interface DirectusDetailRaw {
     id: number;
     document_transmittal_id: number;
     invoice_id: Record<string, unknown> | number | null;

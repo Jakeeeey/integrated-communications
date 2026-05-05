@@ -9,20 +9,20 @@ interface DocumentTransmittalFilterContextType {
   senderId: string | null;
   receiverId: string | null;
   dateRange: DateRange | undefined;
-  status: TransmittalStatus | "All";
+  status: TransmittalStatus[];
   search: string;
 
   // Staged filters (used by UI inputs)
   stagedSenderId: string | null;
   stagedReceiverId: string | null;
   stagedDateRange: DateRange | undefined;
-  stagedStatus: TransmittalStatus | "All";
+  stagedStatus: TransmittalStatus[];
 
   // Setters for staged filters
   setStagedSenderId: (id: string | null) => void;
   setStagedReceiverId: (id: string | null) => void;
   setStagedDateRange: (range: DateRange | undefined) => void;
-  setStagedStatus: (status: TransmittalStatus | "All") => void;
+  setStagedStatus: (status: TransmittalStatus[]) => void;
   setSearch: (search: string) => void;
 
   // Actions
@@ -40,14 +40,14 @@ export function DocumentTransmittalFilterProvider({ children }: { children: Reac
   const [senderId, setSenderId] = useState<string | null>(null);
   const [receiverId, setReceiverId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [status, setStatus] = useState<TransmittalStatus | "All">("All");
+  const [status, setStatus] = useState<TransmittalStatus[]>([]);
   const [search, setSearch] = useState("");
 
   // Staged state
   const [stagedSenderId, setStagedSenderId] = useState<string | null>(null);
   const [stagedReceiverId, setStagedReceiverId] = useState<string | null>(null);
   const [stagedDateRange, setStagedDateRange] = useState<DateRange | undefined>(undefined);
-  const [stagedStatus, setStagedStatus] = useState<TransmittalStatus | "All">("All");
+  const [stagedStatus, setStagedStatus] = useState<TransmittalStatus[]>([]);
 
   const applyFilters = () => {
     setSenderId(stagedSenderId);
@@ -60,20 +60,20 @@ export function DocumentTransmittalFilterProvider({ children }: { children: Reac
     setStagedSenderId(null);
     setStagedReceiverId(null);
     setStagedDateRange(undefined);
-    setStagedStatus("All");
+    setStagedStatus([]);
     setSearch("");
 
     setSenderId(null);
     setReceiverId(null);
     setDateRange(undefined);
-    setStatus("All");
+    setStatus([]);
   };
 
   const isDirty =
     stagedSenderId !== senderId ||
     stagedReceiverId !== receiverId ||
     stagedDateRange !== dateRange ||
-    stagedStatus !== status;
+    JSON.stringify(stagedStatus) !== JSON.stringify(status);
 
   return (
     <DocumentTransmittalFilterContext.Provider

@@ -5,7 +5,7 @@
  */
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-const STATIC_TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
+const STATIC_TOKEN = process.env.NEXT_PUBLIC_DIRECTUS_STATIC_TOKEN || process.env.DIRECTUS_STATIC_TOKEN;
 
 /**
  * Directus response shape:
@@ -26,7 +26,7 @@ export class DocumentTransmittalRepo {
         receiverId?: number;
         senderId?: string | null;
         selectedReceiverId?: string | null;
-        status?: string | null;
+        status?: string[] | null;
         dateFrom?: string | null;
         dateTo?: string | null;
     }) {
@@ -51,10 +51,6 @@ export class DocumentTransmittalRepo {
 
         if (filters.selectedReceiverId) {
             filterObj._and.push({ receiver_id: { _eq: parseInt(filters.selectedReceiverId) } });
-        }
-
-        if (filters.status && filters.status !== "All") {
-            filterObj._and.push({ status: { _eq: filters.status } });
         }
 
         if (filters.dateFrom) {
