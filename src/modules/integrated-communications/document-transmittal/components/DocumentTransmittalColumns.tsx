@@ -5,6 +5,7 @@ import { DocumentTransmittalListItem } from "@/modules/integrated-communications
 import { StatusBadge, StatusTone } from "@/components/ui/status-badge";
 import { formatDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { DataTableColumnHeader } from "./DataTableColumnHeader";
 import { Eye } from "lucide-react";
 
 /**
@@ -16,7 +17,7 @@ export const getDocumentTransmittalColumns = (
 ): ColumnDef<DocumentTransmittalListItem>[] => [
     {
         accessorKey: "documentTransmittalNo",
-        header: "Transmittal No.",
+        header: ({ column }) => <DataTableColumnHeader column={column} label="Transmittal No." />,
         cell: ({ row }) => (
             <span className="font-mono font-bold text-foreground">
                 {row.getValue("documentTransmittalNo")}
@@ -25,43 +26,23 @@ export const getDocumentTransmittalColumns = (
     },
     {
         accessorKey: "senderName",
-        header: "Sender",
+        header: ({ column }) => <DataTableColumnHeader column={column} label="Sender" />,
     },
     {
         accessorKey: "receiverName",
-        header: "Receiver",
+        header: ({ column }) => <DataTableColumnHeader column={column} label="Receiver" />,
     },
     {
         accessorKey: "createdAt",
-        header: "Created",
+        header: ({ column }) => <DataTableColumnHeader column={column} label="Created" />,
         cell: ({ row }) => {
             const date = row.getValue("createdAt") as string;
             return date ? formatDateTime(new Date(date)) : "—";
         },
     },
-    // {
-    //     accessorKey: "invoices",
-    //     header: "Progress",
-    //     cell: ({ row }) => {
-    //         const { acknowledgedInvoices, totalInvoices } = row.original;
-    //         return (
-    //             <div className="flex items-center gap-2">
-    //                 <span className="text-xs font-medium text-muted-foreground">
-    //                     {acknowledgedInvoices} / {totalInvoices}
-    //                 </span>
-    //                 <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-    //                     <div 
-    //                         className="h-full bg-primary transition-all duration-500" 
-    //                         style={{ width: `${(acknowledgedInvoices / totalInvoices) * 100}%` }}
-    //                     />
-    //                 </div>
-    //             </div>
-    //         );
-    //     },
-    // },
     {
         accessorKey: "status",
-        header: "Status",
+        header: ({ column }) => <DataTableColumnHeader column={column} label="Status" />,
         cell: ({ row }) => {
             const status = row.getValue("status") as string;
             let tone: StatusTone = "neutral";
