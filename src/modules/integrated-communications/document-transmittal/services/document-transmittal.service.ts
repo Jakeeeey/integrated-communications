@@ -7,7 +7,8 @@ import {
     DirectusDetailRaw
 } from "./document-transmittal.helpers";
 import { 
-    AcknowledgeSchema 
+    AcknowledgeSchema,
+    ReassignSchema
 } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.schema";
 import { 
     DocumentTransmittalHeader, 
@@ -197,6 +198,95 @@ export class DocumentTransmittalService {
             return {
                 success: false,
                 message: error instanceof Error ? error.message : "An unexpected error occurred"
+            };
+        }
+    }
+    /**
+     * Splits a transmittal by reassigning selected details to a new user.
+     */
+    static async reassignTransmittal(originalHeaderId: number, detailIds: number[], newUserId: number) {
+        try {
+            ReassignSchema.parse({ detailIds, newUserId });
+
+            // 1. Fetch original header to get the sender_id and document_transmittal_no
+            const originalHeaderRes = await DocumentTransmittalRepo.fetchHeaderById(originalHeaderId);
+            const originalHeader = originalHeaderRes.data;
+            
+            if (!originalHeader) throw new Error("Original transmittal not found");
+
+            const originalSenderId = typeof originalHeader.sender_id === "object" && originalHeader.sender_id !== null 
+                ? originalHeader.sender_id.user_id 
+                : (originalHeader.sender_id as number) || 0;
+
+            // 2. Create the new header
+            // Append "-R" to the transmittal no to denote it's a reassigned split
+            const newTransmittalNo = originalHeader.document_transmittal_no ? `${originalHeader.document_transmittal_no}-R` : null;
+            
+            const newHeaderRes = await DocumentTransmittalRepo.createHeader({
+                sender_id: originalSenderId,
+                receiver_id: newUserId,
+                document_transmittal_no: newTransmittalNo
+            });
+
+            const newHeaderId = newHeaderRes.data.id;
+
+            // 3. Patch the selected detail rows to the new header
+            await DocumentTransmittalRepo.reassignDetails(detailIds, newHeaderId);
+
+            return { success: true, message: "Receipts successfully reassigned", newHeaderId };
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return {
+                    success: false,
+                    message: "Validation failed: " + error.issues.map((e: z.ZodIssue) => e.message).join(", ")
+                };
+            }
+            console.error(`[DocumentTransmittalService] Reassign error:`, error);
+            return {
+                success: false,
+                message: error instanceof Error ? error.message : "An unexpected error occurred during reassignment"
+            };
+        }
+    }
+    /**
+     * Bulks acknowledges (and optionally reassigns) details from potentially multiple original headers.
+     * Groups details by their original header ID to preserve sender information.
+     */
+    static async bulkAcknowledgeWithUser(details: { id: number; headerId: number }[], newUserId: number, originalUserId: number) {
+        try {
+            // Group detail IDs by their original header ID
+            const groupedDetails = details.reduce((acc, curr) => {
+                if (!acc[curr.headerId]) acc[curr.headerId] = [];
+                acc[curr.headerId].push(curr.id);
+                return acc;
+            }, {} as Record<number, number[]>);
+
+            for (const [headerIdStr, detailIds] of Object.entries(groupedDetails)) {
+                const headerId = parseInt(headerIdStr);
+                let targetHeaderId = headerId;
+
+                // 1. Reassign if the target user is different from the original
+                if (newUserId !== originalUserId) {
+                    const reassignRes = await this.reassignTransmittal(headerId, detailIds, newUserId);
+                    if (!reassignRes.success || !reassignRes.newHeaderId) {
+                        throw new Error(`Failed to reassign some invoices: ${reassignRes.message}`);
+                    }
+                    targetHeaderId = reassignRes.newHeaderId;
+                }
+
+                // 2. Acknowledge under the target header
+                const ackRes = await this.acknowledgeTransmittal(targetHeaderId, detailIds);
+                if (!ackRes.success) {
+                    throw new Error(`Failed to acknowledge some invoices: ${ackRes.message}`);
+                }
+            }
+
+            return { success: true, message: "Bulk acknowledgment complete" };
+        } catch (error) {
+            console.error(`[DocumentTransmittalService] Bulk Acknowledge error:`, error);
+            return {
+                success: false,
+                message: error instanceof Error ? error.message : "An unexpected error occurred during bulk acknowledgment"
             };
         }
     }

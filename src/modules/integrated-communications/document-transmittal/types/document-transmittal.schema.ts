@@ -12,6 +12,14 @@ export const AcknowledgeSchema = z.object({
 
 export type AcknowledgeInput = z.infer<typeof AcknowledgeSchema>;
 
+/** Schema for reassigning invoices to a new user */
+export const ReassignSchema = z.object({
+    detailIds: z.array(z.number().int().positive()).min(1, "At least one invoice must be selected"),
+    newUserId: z.number().int().positive("A valid user must be selected"),
+});
+
+export type ReassignInput = z.infer<typeof ReassignSchema>;
+
 /** Basic User Info Schema */
 export const TransmittalUserInfoSchema = z.object({
     userId: z.number(),
