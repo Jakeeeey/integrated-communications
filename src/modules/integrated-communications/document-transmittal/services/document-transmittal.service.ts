@@ -24,15 +24,21 @@ import { z } from "zod";
 
 export class DocumentTransmittalService {
     /**
-     * Retrieves the master list of transmittals.
-     * Optionally filters by userId (receiver).
+     * Retrieves the master list of transmittals with server-side filtering.
      */
-    static async getTransmittalList(userId?: number): Promise<DocumentTransmittalListItem[]> {
+    static async getTransmittalList(filters: {
+        receiverId?: number;
+        senderId?: string | null;
+        selectedReceiverId?: string | null;
+        status?: string | null;
+        dateFrom?: string | null;
+        dateTo?: string | null;
+    }): Promise<DocumentTransmittalListItem[]> {
         try {
-            const headerRes = await DocumentTransmittalRepo.fetchAllTransmittals(userId);
+            const headerRes = await DocumentTransmittalRepo.fetchAllTransmittals(filters);
             const rawHeaders = headerRes.data || [];
 
-            // Fetch all details in one call to compute per-header counts
+            // Fetch detail counts for the returned headers
             const allDetailsRes = await fetch(
                 `${process.env.NEXT_PUBLIC_API_BASE_URL}/items/document_transmittal_details?fields=document_transmittal_id,receivedAt&limit=-1`,
                 { next: { revalidate: 0 } }

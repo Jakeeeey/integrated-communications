@@ -75,9 +75,14 @@ export function mapHeaderToListItem(
     totalInvoices: number,
     acknowledgedInvoices: number,
 ): DocumentTransmittalListItem {
+    const getUserId = (user: DirectusUserJoin | number | null) => 
+        (user && typeof user === "object") ? user.user_id : (typeof user === "number" ? user : null);
+
     return {
         id: header.id,
         documentTransmittalNo: header.document_transmittal_no || "N/A",
+        senderId: getUserId(header.sender_id),
+        receiverId: getUserId(header.receiver_id),
         senderName: formatUserFullName(header.sender_id as DirectusUserJoin | number | null),
         receiverName: formatUserFullName(header.receiver_id as DirectusUserJoin | number | null),
         createdAt: header.createdAt,

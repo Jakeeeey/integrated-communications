@@ -20,10 +20,16 @@ const STATIC_TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
 
 export class DocumentTransmittalRepo {
     /**
-     * Fetches document transmittal headers with sender/receiver names.
-     * Optionally filters by receiverId to show only transmittals assigned to the current user.
+     * Fetches document transmittal headers with complex server-side filtering.
      */
-    static async fetchAllTransmittals(receiverId?: number) {
+    static async fetchAllTransmittals(filters: {
+        receiverId?: number;
+        senderId?: string | null;
+        selectedReceiverId?: string | null;
+        status?: string | null;
+        dateFrom?: string | null;
+        dateTo?: string | null;
+    }) {
         const fields = [
             "*",
             "sender_id.user_id", "sender_id.user_fname", "sender_id.user_mname", "sender_id.user_lname",
@@ -32,15 +38,40 @@ export class DocumentTransmittalRepo {
 
         let url = `${API_BASE_URL}/items/document_transmittal_header?fields=${fields}&sort=-id&limit=-1`;
 
-        if (receiverId) {
-            console.log("[REPO] Fetching transmittals for Receiver ID:", receiverId);
-            const filter = encodeURIComponent(JSON.stringify({
-                receiver_id: { _eq: receiverId }
-            }));
-            url += `&filter=${filter}`;
+        const filterObj: any = { _and: [] };
+
+        // Logged-in user is usually the receiver
+        if (filters.receiverId) {
+            filterObj._and.push({ receiver_id: { _eq: filters.receiverId } });
+        }
+
+        if (filters.senderId) {
+            filterObj._and.push({ sender_id: { _eq: parseInt(filters.senderId) } });
+        }
+
+        if (filters.selectedReceiverId) {
+            filterObj._and.push({ receiver_id: { _eq: parseInt(filters.selectedReceiverId) } });
+        }
+
+        if (filters.status && filters.status !== "All") {
+            filterObj._and.push({ status: { _eq: filters.status } });
+        }
+
+        if (filters.dateFrom) {
+            filterObj._and.push({ createdAt: { _gte: filters.dateFrom } });
+        }
+        if (filters.dateTo) {
+            filterObj._and.push({ createdAt: { _lte: filters.dateTo } });
+        }
+
+        if (filterObj._and.length > 0) {
+            url += `&filter=${encodeURIComponent(JSON.stringify(filterObj))}`;
         }
 
         const response = await fetch(url, {
+            headers: {
+                "Authorization": `Bearer ${STATIC_TOKEN}`,
+            },
             next: { revalidate: 0 },
         });
 
@@ -72,6 +103,9 @@ export class DocumentTransmittalRepo {
         const url = `${API_BASE_URL}/items/document_transmittal_details?fields=${fields}&filter=${filter}&limit=-1`;
 
         const response = await fetch(url, {
+            headers: {
+                "Authorization": `Bearer ${STATIC_TOKEN}`,
+            },
             next: { revalidate: 0 },
         });
 
@@ -95,6 +129,9 @@ export class DocumentTransmittalRepo {
         const url = `${API_BASE_URL}/items/document_transmittal_header/${headerId}?fields=${fields}`;
 
         const response = await fetch(url, {
+            headers: {
+                "Authorization": `Bearer ${STATIC_TOKEN}`,
+            },
             next: { revalidate: 0 },
         });
 
