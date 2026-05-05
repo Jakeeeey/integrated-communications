@@ -63,8 +63,8 @@ export const TransmittalDetailModal = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="!max-w-5xl w-[95vw] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl">
-                <DialogHeader className="p-6 pb-4 bg-muted/30 border-b">
+            <DialogContent className="!max-w-5xl w-[95vw] max-h-[95vh] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl">
+                <DialogHeader className="p-6 pb-4 bg-muted/30 border-b shrink-0">
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
@@ -109,7 +109,7 @@ export const TransmittalDetailModal = ({
                     </div>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-hidden p-6 bg-background">
+                <div className="flex-1 flex flex-col overflow-hidden p-6 bg-background">
                     <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                             Transmittal Invoices
@@ -124,19 +124,20 @@ export const TransmittalDetailModal = ({
                         )}
                     </div>
 
-                    <div className="rounded-xl overflow-hidden h-[calc(100%-40px)]">
+                    <div className="flex-1 min-h-0 relative">
                         <DataTable
                             columns={columns}
                             data={details}
                             isLoading={isLoading}
                             onSelectionChange={handleSelectionChange}
+                            searchKey="invoiceNo"
                             emptyTitle="No invoices found"
                             emptyDescription="This transmittal doesn't contain any invoice records."
                         />
                     </div>
                 </div>
 
-                <DialogFooter className="p-4 bg-muted/30 border-t flex items-center justify-between sm:justify-between">
+                <DialogFooter className="p-4 bg-muted/30 border-t flex items-center justify-between sm:justify-between shrink-0">
                     <div className="text-xs text-muted-foreground italic">
                         Select pending invoices above to acknowledge receipt.
                     </div>

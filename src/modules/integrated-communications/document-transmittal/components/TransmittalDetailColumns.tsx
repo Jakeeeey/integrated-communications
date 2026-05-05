@@ -43,6 +43,7 @@ export const getTransmittalDetailColumns = (): ColumnDef<DocumentTransmittalDeta
     },
     {
         accessorKey: "invoice.invoiceNo",
+        id: "invoiceNo",
         header: "Invoice No.",
         cell: ({ row }) => (
             <span className="font-medium text-foreground">
