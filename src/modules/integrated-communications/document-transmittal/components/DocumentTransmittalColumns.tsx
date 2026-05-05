@@ -2,7 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { DocumentTransmittalListItem } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.types";
-import { StatusBadge, StatusTone } from "@/components/ui/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DataTableColumnHeader } from "./DataTableColumnHeader";
@@ -45,28 +45,29 @@ export const getDocumentTransmittalColumns = (
         header: ({ column }) => <DataTableColumnHeader column={column} label="Status" />,
         cell: ({ row }) => {
             const status = row.getValue("status") as string;
-            let tone: StatusTone = "neutral";
             
-            if (status === "Fully Received") tone = "success";
-            else if (status === "Partially Received") tone = "info";
-            else if (status === "Pending") tone = "warning";
+            let variant: "destructive" | "secondary" | "default" | "outline" = "outline";
+            if (status === "Pending") variant = "destructive";
+            else if (status === "Partially Received") variant = "secondary";
+            else if (status === "Fully Received") variant = "default";
 
-            return <StatusBadge tone={tone}>{status}</StatusBadge>;
+            return <Badge variant={variant}>{status}</Badge>;
         },
     },
     {
         id: "actions",
-        header: "Actions",
+        header: () => <div className="text-right pr-4">Actions</div>,
         cell: ({ row }) => (
-            <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 hover:bg-muted"
-                onClick={() => onView(row.original.id)}
-            >
-                <Eye className="h-4 w-4" />
-                <span className="sr-only">View Details</span>
-            </Button>
+            <div className="flex justify-end pr-2">
+                <Button
+                    variant="default"
+                    size="sm"
+                    className="h-8 px-3 font-semibold shadow-sm"
+                    onClick={() => onView(row.original.id)}
+                >
+                    View Details
+                </Button>
+            </div>
         ),
     },
 ];

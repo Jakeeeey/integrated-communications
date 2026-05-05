@@ -15,7 +15,7 @@ import { StatusBadge, StatusTone } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, cn } from "@/lib/utils";
 import { FileText, User, Calendar, CheckSquare, Loader2 } from "lucide-react";
 
 interface TransmittalDetailModalProps {
@@ -55,6 +55,10 @@ export const TransmittalDetailModal = ({
     }, []);
 
     const columns = useMemo(() => getTransmittalDetailColumns(), []);
+
+    const totalInvoices = details.length;
+    const acknowledgedCount = details.filter(d => d.receivedAt !== null).length;
+    const isFullyAcknowledged = totalInvoices > 0 && acknowledgedCount === totalInvoices;
 
     let tone: StatusTone = "neutral";
     if (status === "Fully Received") tone = "success";
@@ -114,14 +118,21 @@ export const TransmittalDetailModal = ({
                         <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                             Transmittal Invoices
                             <Badge variant="secondary" className="rounded-full px-2 py-0 h-5">
-                                {details.length}
+                                {totalInvoices}
                             </Badge>
                         </h3>
-                        {selectedRows.length > 0 && (
-                            <Badge className="bg-primary/10 text-primary border-primary/20 animate-in fade-in slide-in-from-right-2">
-                                {selectedRows.length} Invoice(s) Selected
-                            </Badge>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {acknowledgedCount > 0 && (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                    {acknowledgedCount} / {totalInvoices} Acknowledged
+                                </Badge>
+                            )}
+                            {selectedRows.length > 0 && (
+                                <Badge className="bg-primary/10 text-primary border-primary/20 animate-in fade-in slide-in-from-right-2">
+                                    {selectedRows.length} Invoice(s) Selected
+                                </Badge>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex-1 min-h-0 relative">
@@ -138,24 +149,43 @@ export const TransmittalDetailModal = ({
                 </div>
 
                 <DialogFooter className="p-4 bg-muted/30 border-t flex items-center justify-between sm:justify-between shrink-0">
-                    <div className="text-xs text-muted-foreground italic">
-                        Select pending invoices above to acknowledge receipt.
+                    <div className="text-xs font-medium text-muted-foreground">
+                        {isFullyAcknowledged ? (
+                            <span className="text-green-600 flex items-center gap-1.5">
+                                <CheckSquare className="h-3.5 w-3.5" />
+                                All invoices have been acknowledged.
+                            </span>
+                        ) : (
+                            <span className="italic">
+                                {acknowledgedCount > 0 
+                                    ? `${totalInvoices - acknowledgedCount} pending invoices remaining.`
+                                    : "Select pending invoices above to acknowledge receipt."
+                                }
+                            </span>
+                        )}
                     </div>
                     <div className="flex gap-3">
                         <Button variant="outline" onClick={() => onOpenChange(false)}>
                             Close
                         </Button>
                         <Button 
-                            disabled={selectedRows.length === 0 || isAcknowledging}
+                            disabled={selectedRows.length === 0 || isAcknowledging || isFullyAcknowledged}
                             onClick={handleAcknowledgeClick}
-                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
+                            className={cn(
+                                "font-bold transition-all",
+                                isFullyAcknowledged 
+                                    ? "bg-green-600 hover:bg-green-600 opacity-100 text-white cursor-default" 
+                                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                            )}
                         >
                             {isAcknowledging ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : isFullyAcknowledged ? (
+                               <CheckSquare className="mr-2 h-4 w-4" />
                             ) : (
                                 <CheckSquare className="mr-2 h-4 w-4" />
                             )}
-                            Acknowledge Receipt
+                            {isFullyAcknowledged ? "Acknowledged" : "Acknowledge Receipt"}
                         </Button>
                     </div>
                 </DialogFooter>
