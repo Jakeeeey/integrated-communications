@@ -11,7 +11,6 @@ import { useDocumentTransmittalFilter } from "../context/DocumentTransmittalFilt
 import { Combobox } from "./Combobox";
 import { TransmittalStatus } from "../types/document-transmittal.types";
 import { DataTableFacetedFilter } from "./DataTableFacetedFilter";
-import { Separator } from "@/components/ui/separator";
 
 interface DocumentTransmittalFiltersProps {
   availableSenders: { label: string; value: string }[];

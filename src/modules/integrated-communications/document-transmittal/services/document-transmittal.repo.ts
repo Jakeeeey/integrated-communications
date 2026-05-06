@@ -38,7 +38,7 @@ export class DocumentTransmittalRepo {
 
         let url = `${API_BASE_URL}/items/document_transmittal_header?fields=${fields}&sort=-id&limit=-1`;
 
-        const filterObj: any = { _and: [] };
+        const filterObj: { _and: Record<string, unknown>[] } = { _and: [] };
 
         // Logged-in user is usually the receiver
         if (filters.receiverId) {
@@ -247,16 +247,21 @@ export class DocumentTransmittalRepo {
             "receivedAt",
             "document_transmittal_id.id",
             "document_transmittal_id.document_transmittal_no",
+            "document_transmittal_id.receiver_id.user_fname",
+            "document_transmittal_id.receiver_id.user_lname",
             "invoice_id.invoice_id",
             "invoice_id.invoice_no",
+            "invoice_id.invoice_date",
             "invoice_id.net_amount",
-            "invoice_id.customer_code"
+            "invoice_id.customer_code",
+            "invoice_id.invoiceAt"
         ].join(",");
 
         let url = `${API_BASE_URL}/items/document_transmittal_details?fields=${fields}&filter[receivedAt][_null]=true&limit=-1`;
         
         if (receiverId) {
-            url += `&filter[document_transmittal_id][receiver_id][_eq]=${receiverId}`;
+            // Filter by the user currently holding the invoice
+            url += `&filter[invoice_id][invoiceAt][_eq]=${receiverId}`;
         }
 
         const response = await fetch(url, {
@@ -287,5 +292,28 @@ export class DocumentTransmittalRepo {
         }
 
         return response.json();
+    }
+
+    /**
+     * Updates the invoiceAt field in the post_dispatch_invoices table.
+     */
+    static async updateInvoiceAt(id: number, userId: number) {
+        try {
+            const url = `${API_BASE_URL}/items/post_dispatch_invoices/${id}`;
+            const response = await fetch(url, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${STATIC_TOKEN}`
+                },
+                body: JSON.stringify({ invoiceAt: userId })
+            });
+
+            if (!response.ok) throw new Error("Failed to update invoiceAt");
+            return { success: true };
+        } catch (error) {
+            console.error("[Repo] Error updating invoiceAt:", error);
+            return { success: false };
+        }
     }
 }

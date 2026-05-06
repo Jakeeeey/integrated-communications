@@ -2,7 +2,6 @@ import { DocumentTransmittalRepo } from "./document-transmittal.repo";
 import { 
     mapHeaderToListItem, 
     deriveTransmittalStatus,
-    formatUserFullName,
     DirectusHeaderRaw,
     DirectusDetailRaw
 } from "./document-transmittal.helpers";
@@ -170,23 +169,57 @@ export class DocumentTransmittalService {
     }
 
     /**
-     * Acknowledges invoices and auto-stamps header when complete.
+     * Handles invoice acknowledgment OR reassignment depending on the target user.
      */
-    static async acknowledgeTransmittal(id: number, detailIds: number[]) {
+    static async acknowledgeTransmittal(id: number, detailIds: number[], targetUserId?: number, performingUserId?: number) {
         try {
             AcknowledgeSchema.parse({ detailIds });
 
-            await DocumentTransmittalRepo.acknowledgeDetails(detailIds);
+            let targetHeaderId = id;
+            let wasReassigned = false;
 
-            // Re-fetch to check if all details are now acknowledged
-            const updated = await this.getTransmittalDetail(id);
-            const allDone = updated.details.every(d => d.receivedAt !== null);
+            // Determine whether to reassign or acknowledge
+            if (targetUserId) {
+                const headerRes = await DocumentTransmittalRepo.fetchHeaderById(id);
+                const header = headerRes.data;
+                if (header) {
+                    const currentReceiverId = typeof header.receiver_id === "object" && header.receiver_id !== null 
+                        ? header.receiver_id.user_id 
+                        : (header.receiver_id as number) || 0;
 
-            if (allDone) {
-                await DocumentTransmittalRepo.stampHeaderReceived(id);
+                    if (currentReceiverId !== targetUserId) {
+                        // REASSIGN ONLY — do NOT acknowledge
+                        const reassignRes = await this.reassignTransmittal(id, detailIds, targetUserId, performingUserId);
+                        if (!reassignRes.success || !reassignRes.newHeaderId) {
+                            throw new Error(reassignRes.message || "Failed to reassign invoices");
+                        }
+                        targetHeaderId = reassignRes.newHeaderId;
+                        wasReassigned = true;
+                    }
+                }
             }
 
-            return { success: true, message: "Invoices acknowledged successfully" };
+            // Only stamp receivedAt when NOT reassigning to a different user
+            if (!wasReassigned) {
+                await DocumentTransmittalRepo.acknowledgeDetails(detailIds);
+
+                // Re-fetch to check if all details are now acknowledged
+                const updated = await this.getTransmittalDetail(targetHeaderId);
+                const allDone = updated.details.every(d => d.receivedAt !== null);
+
+                if (allDone) {
+                    await DocumentTransmittalRepo.stampHeaderReceived(targetHeaderId);
+                }
+
+                return { success: true, message: "Invoices acknowledged successfully", targetHeaderId };
+            }
+
+            // Reassignment-only response
+            return { 
+                success: true, 
+                message: "Invoices reassigned successfully. The new receiver must acknowledge them.", 
+                targetHeaderId 
+            };
         } catch (error) {
             if (error instanceof z.ZodError) {
                 return {
@@ -194,7 +227,7 @@ export class DocumentTransmittalService {
                     message: "Validation failed: " + error.issues.map((e: z.ZodIssue) => e.message).join(", ")
                 };
             }
-            console.error(`[DocumentTransmittalService] Acknowledge error:`, error);
+            console.error(`[DocumentTransmittalService] Acknowledge/Reassign error:`, error);
             return {
                 success: false,
                 message: error instanceof Error ? error.message : "An unexpected error occurred"
@@ -204,7 +237,7 @@ export class DocumentTransmittalService {
     /**
      * Splits a transmittal by reassigning selected details to a new user.
      */
-    static async reassignTransmittal(originalHeaderId: number, detailIds: number[], newUserId: number) {
+    static async reassignTransmittal(originalHeaderId: number, detailIds: number[], newUserId: number, performingUserId?: number) {
         try {
             ReassignSchema.parse({ detailIds, newUserId });
 
@@ -214,16 +247,18 @@ export class DocumentTransmittalService {
             
             if (!originalHeader) throw new Error("Original transmittal not found");
 
-            const originalSenderId = typeof originalHeader.sender_id === "object" && originalHeader.sender_id !== null 
-                ? originalHeader.sender_id.user_id 
-                : (originalHeader.sender_id as number) || 0;
+            // Use performingUserId as the new sender, or fallback to original sender
+            const newSenderId = performingUserId || (
+                typeof originalHeader.sender_id === "object" && originalHeader.sender_id !== null 
+                    ? originalHeader.sender_id.user_id 
+                    : (originalHeader.sender_id as number) || 0
+            );
 
-            // 2. Create the new header
-            // Append "-R" to the transmittal no to denote it's a reassigned split
-            const newTransmittalNo = originalHeader.document_transmittal_no ? `${originalHeader.document_transmittal_no}-R` : null;
+            // 2. Create the new header — keep the same transmittal number
+            const newTransmittalNo = originalHeader.document_transmittal_no || null;
             
             const newHeaderRes = await DocumentTransmittalRepo.createHeader({
-                sender_id: originalSenderId,
+                sender_id: newSenderId,
                 receiver_id: newUserId,
                 document_transmittal_no: newTransmittalNo
             });
@@ -233,26 +268,34 @@ export class DocumentTransmittalService {
             // 3. Patch the selected detail rows to the new header
             await DocumentTransmittalRepo.reassignDetails(detailIds, newHeaderId);
 
-            return { success: true, message: "Receipts successfully reassigned", newHeaderId };
-        } catch (error) {
-            if (error instanceof z.ZodError) {
-                return {
-                    success: false,
-                    message: "Validation failed: " + error.issues.map((e: z.ZodIssue) => e.message).join(", ")
-                };
+            // 4. Update the invoiceAt field in post_dispatch_invoices for each invoice
+            // Fetch the details to get the post_dispatch_invoice IDs
+            const detailsRes = await DocumentTransmittalRepo.fetchDetailsByHeaderId(originalHeaderId);
+            const reassignedDetails = (detailsRes.data || []).filter((d: DocumentTransmittalDetail) => detailIds.includes(d.id));
+
+            for (const detail of reassignedDetails) {
+                const postDispatchInvoiceId = (detail.invoice as any)?.id || detail.invoiceId;
+                if (postDispatchInvoiceId) {
+                    await DocumentTransmittalRepo.updateInvoiceAt(postDispatchInvoiceId, newUserId);
+                }
             }
-            console.error(`[DocumentTransmittalService] Reassign error:`, error);
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "An unexpected error occurred during reassignment"
+
+            return { 
+                success: true, 
+                message: "Invoices reassigned successfully",
+                newHeaderId 
             };
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "An unexpected error occurred during reassignment";
+            console.error("[Service] Error reassigning transmittal:", error);
+            return { success: false, message };
         }
     }
     /**
      * Bulks acknowledges (and optionally reassigns) details from potentially multiple original headers.
      * Groups details by their original header ID to preserve sender information.
      */
-    static async bulkAcknowledgeWithUser(details: { id: number; headerId: number }[], newUserId: number, originalUserId: number) {
+    static async bulkAcknowledgeWithUser(details: { id: number; headerId: number }[], targetUserId: number, performingUserId?: number) {
         try {
             // Group detail IDs by their original header ID
             const groupedDetails = details.reduce((acc, curr) => {
@@ -263,19 +306,9 @@ export class DocumentTransmittalService {
 
             for (const [headerIdStr, detailIds] of Object.entries(groupedDetails)) {
                 const headerId = parseInt(headerIdStr);
-                let targetHeaderId = headerId;
 
-                // 1. Reassign if the target user is different from the original
-                if (newUserId !== originalUserId) {
-                    const reassignRes = await this.reassignTransmittal(headerId, detailIds, newUserId);
-                    if (!reassignRes.success || !reassignRes.newHeaderId) {
-                        throw new Error(`Failed to reassign some invoices: ${reassignRes.message}`);
-                    }
-                    targetHeaderId = reassignRes.newHeaderId;
-                }
-
-                // 2. Acknowledge under the target header
-                const ackRes = await this.acknowledgeTransmittal(targetHeaderId, detailIds);
+                // Acknowledge (and smart-reassign if needed) under each group
+                const ackRes = await this.acknowledgeTransmittal(headerId, detailIds, targetUserId, performingUserId);
                 if (!ackRes.success) {
                     throw new Error(`Failed to acknowledge some invoices: ${ackRes.message}`);
                 }

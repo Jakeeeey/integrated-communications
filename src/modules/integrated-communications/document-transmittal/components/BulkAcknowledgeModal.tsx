@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckSquare } from "lucide-react";
+import { Loader2, CheckSquare, User } from "lucide-react";
 import { Combobox } from "./Combobox";
 import { DataTable } from "@/components/ui/new-data-table";
 import { ColumnDef } from "@tanstack/react-table";
@@ -13,10 +13,15 @@ interface PendingDetail {
     document_transmittal_id: {
         id: number;
         document_transmittal_no: string;
+        receiver_id: {
+            user_fname: string;
+            user_lname: string;
+        } | null;
     };
     invoice_id: {
         invoice_id: number;
         invoice_no: string;
+        invoice_date: string | null;
         net_amount: number;
         customer_code: string;
     };
@@ -26,7 +31,7 @@ interface BulkAcknowledgeModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     availableUsers: { label: string; value: string }[];
-    onBulkAcknowledge: (details: { id: number; headerId: number }[], newUserId: number) => Promise<boolean>;
+    onBulkAcknowledge: (details: { id: number; headerId: number }[], assignedUserId: number) => Promise<boolean>;
     isAcknowledging: boolean;
 }
 
@@ -115,12 +120,20 @@ export const BulkAcknowledgeModal = ({
                 enableHiding: false,
             },
             {
-                accessorKey: "document_transmittal_id.document_transmittal_no",
-                header: "Transmittal No.",
-            },
-            {
                 accessorKey: "invoice_id.invoice_no",
                 header: "Invoice No.",
+            },
+            {
+                accessorKey: "invoice_id.invoice_date",
+                header: "Invoice Date",
+                cell: ({ row }) => {
+                    const date = row.original.invoice_id.invoice_date;
+                    return date ? new Date(date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "2-digit",
+                        year: "numeric"
+                    }) : "—";
+                }
             },
             {
                 accessorKey: "invoice_id.customer_code",
@@ -130,7 +143,7 @@ export const BulkAcknowledgeModal = ({
                 accessorKey: "invoice_id.net_amount",
                 header: "Amount",
                 cell: ({ row }) => {
-                    const amount = parseFloat(row.getValue("invoice_id_net_amount") || "0");
+                    const amount = parseFloat(row.original.invoice_id.net_amount.toString() || "0");
                     return `₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 },
             },
@@ -143,33 +156,42 @@ export const BulkAcknowledgeModal = ({
             <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden bg-background border-border/40 shadow-2xl">
                 <DialogHeader className="p-6 pb-4 border-b border-border/40 bg-muted/20">
                     <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-                        <CheckSquare className="h-5 w-5 text-primary" />
-                        Acknowledge Pending Receipts
+                        <User className="h-5 w-5 text-primary" />
+                        Manage Your Pending Receipts
                     </DialogTitle>
                     <DialogDescription>
-                        Select invoices from your pending queue and choose who will receive them.
+                        Acknowledge or reassign invoices currently assigned to you.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="flex-1 overflow-auto p-6 space-y-6">
-                    <div className="space-y-3">
-                        <Combobox
-                            options={availableUsers}
-                            value={selectedUserId}
-                            onValueChange={setSelectedUserId}
-                            placeholder="Search active users..."
-                            className="w-full md:w-1/2"
-                        />
-                    </div>
+                    <div className="space-y-4">
+                        <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col gap-4">
+                            <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <User className="h-4 w-4 text-primary" />
+                                </div>
+                                <div className="space-y-0.5">
+                                    <h4 className="text-sm font-bold leading-none">Who will acknowledge?</h4>
+                                    <p className="text-[10px] text-muted-foreground uppercase font-medium">Select the user who will take ownership of these receipts</p>
+                                </div>
+                            </div>
+                            <Combobox
+                                options={availableUsers}
+                                value={selectedUserId}
+                                onValueChange={setSelectedUserId}
+                                placeholder="Search system users..."
+                                className="w-full"
+                            />
+                        </div>
 
-                    <div className="space-y-3">
                         <DataTable
                             columns={columns}
                             data={pendingDetails}
                             isLoading={isLoading}
                             searchKey="invoice_id_invoice_no"
                             emptyTitle="No pending invoices"
-                            emptyDescription="You have no pending invoices assigned to you."
+                            emptyDescription="The pending queue is currently empty."
                         />
                     </div>
                 </div>

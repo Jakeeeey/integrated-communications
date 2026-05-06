@@ -77,7 +77,6 @@ export const useDocumentTransmittal = () => {
             setIsLoading(false);
         }
     }, [senderId, receiverId, status, dateRange]);
-
     /**
      * Fetches all active users for the delegation dropdown.
      */
@@ -86,7 +85,7 @@ export const useDocumentTransmittal = () => {
             const response = await fetch(`/api/ic/document-transmittal/users`);
             const result = await response.json();
             if (response.ok && result.success) {
-                const formatted = result.data.map((u: any) => ({
+                const formatted = result.data.map((u: { user_fname: string; user_lname: string; user_id: number }) => ({
                     label: `${u.user_fname} ${u.user_lname}`,
                     value: u.user_id.toString()
                 }));
@@ -148,43 +147,21 @@ export const useDocumentTransmittal = () => {
     /**
      * Executes the acknowledgment for selected invoices, handling reassignment if necessary.
      */
-    const handleAcknowledgeWithUser = useCallback(async (id: number, detailIds: number[], assignedUserId: number, originalReceiverId: number) => {
-        if (detailIds.length === 0 || !assignedUserId) return false;
+    const handleAcknowledge = useCallback(async (id: number, detailIds: number[], assignedUserId?: number) => {
+        if (detailIds.length === 0) return false;
 
         setIsAcknowledging(true);
         try {
-            let targetHeaderId = id;
-
-            // 1. If assigned user is different from original receiver, split it first
-            if (assignedUserId !== originalReceiverId) {
-                const reassignRes = await fetch(`/api/ic/document-transmittal/${id}?action=reassign`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ detailIds, newUserId: assignedUserId }),
-                });
-                
-                const reassignResult = await reassignRes.json();
-                
-                if (!reassignRes.ok || !reassignResult.success) {
-                     toast.error("Reassign Failed", { description: reassignResult.message || "Failed to reassign invoices to the selected user." });
-                     return false;
-                }
-                
-                // The newly created transmittal header ID
-                targetHeaderId = reassignResult.newHeaderId;
-            }
-
-            // 2. Acknowledge the invoices under the target header
-            const ackRes = await fetch(`/api/ic/document-transmittal/${targetHeaderId}?action=acknowledge`, {
+            const ackRes = await fetch(`/api/ic/document-transmittal/${id}?action=acknowledge`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ detailIds }),
+                body: JSON.stringify({ detailIds, assignedUserId }),
             });
             
             const ackResult = await ackRes.json();
 
             if (ackRes.ok && ackResult.success) {
-                toast.success("Success", { description: "Invoices acknowledged successfully." });
+                toast.success("Success", { description: ackResult.message || "Operation completed successfully." });
                 
                 // Refresh local detail state to show changes
                 await fetchDetail(id);
@@ -197,7 +174,7 @@ export const useDocumentTransmittal = () => {
                 return false;
             }
         } catch (err) {
-            console.error("[useDocumentTransmittal] Acknowledge With User error:", err);
+            console.error("[useDocumentTransmittal] Acknowledge error:", err);
             toast.error("Error", { description: "A network error occurred. Please try again." });
             return false;
         } finally {
@@ -208,21 +185,21 @@ export const useDocumentTransmittal = () => {
     /**
      * Executes bulk acknowledgment across multiple headers.
      */
-    const handleBulkAcknowledge = useCallback(async (details: { id: number; headerId: number }[], newUserId: number) => {
-        if (details.length === 0 || !newUserId) return false;
+    const handleBulkAcknowledge = useCallback(async (details: { id: number; headerId: number }[], assignedUserId?: number) => {
+        if (details.length === 0) return false;
 
         setIsBulkAcknowledging(true);
         try {
             const response = await fetch(`/api/ic/document-transmittal/bulk-acknowledge`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ details, newUserId }),
+                body: JSON.stringify({ details, assignedUserId }),
             });
 
             const result = await response.json();
 
             if (response.ok && result.success) {
-                toast.success("Success", { description: "Bulk acknowledgment complete." });
+                toast.success("Success", { description: result.message || "Operation completed successfully." });
                 refresh();
                 return true;
             } else {
@@ -264,7 +241,7 @@ export const useDocumentTransmittal = () => {
         fetchDetail,
 
         // Actions
-        handleAcknowledgeWithUser,
+        handleAcknowledge,
         isAcknowledging,
         handleBulkAcknowledge,
         isBulkAcknowledging,

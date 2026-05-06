@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { DocumentTransmittalRepo } from "@/modules/integrated-communications/document-transmittal/services/document-transmittal.repo";
 
@@ -10,7 +10,7 @@ const COOKIE_NAME = "vos_access_token";
  * GET /api/ic/document-transmittal/users
  * Fetches all users for the acknowledgment dropdown.
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
     try {
         const cookieStore = await cookies();
         const token = cookieStore.get(COOKIE_NAME)?.value;
@@ -29,10 +29,11 @@ export async function GET(req: NextRequest) {
             data: response.data || []
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Failed to fetch users";
         console.error("[API] Error fetching users:", error);
         return NextResponse.json(
-            { success: false, message: error.message || "Failed to fetch users" },
+            { success: false, message },
             { status: 500 }
         );
     }

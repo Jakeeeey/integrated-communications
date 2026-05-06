@@ -57,12 +57,12 @@ export function deriveTransmittalStatus(
     totalDetails: number,
     acknowledgedCount: number
 ): TransmittalStatus {
-    if (headerReceivedAt || (totalDetails > 0 && acknowledgedCount === totalDetails)) {
-        return "Fully Received";
+    if (totalDetails > 0) {
+        if (acknowledgedCount === totalDetails) return "Fully Received";
+        if (acknowledgedCount > 0) return "Partially Received";
     }
-    if (acknowledgedCount > 0) {
-        return "Partially Received";
-    }
+    
+    if (headerReceivedAt) return "Fully Received";
     return "Pending";
 }
 

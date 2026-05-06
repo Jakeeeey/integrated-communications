@@ -34,16 +34,17 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { details, newUserId } = body;
+        const { details, assignedUserId } = body;
 
-        if (!details || !Array.isArray(details) || details.length === 0 || !newUserId) {
+        if (!details || !Array.isArray(details) || details.length === 0) {
             return NextResponse.json(
-                { success: false, message: "Invalid payload: Missing details or newUserId" },
+                { success: false, message: "Invalid payload: Missing details" },
                 { status: 400 }
             );
         }
 
-        const result = await DocumentTransmittalService.bulkAcknowledgeWithUser(details, newUserId, userId);
+        // Use the assigned user ID or default to the logged-in user
+        const result = await DocumentTransmittalService.bulkAcknowledgeWithUser(details, assignedUserId || userId, userId);
 
         if (result.success) {
             return NextResponse.json(result);
@@ -51,10 +52,11 @@ export async function POST(req: NextRequest) {
             return NextResponse.json(result, { status: 400 });
         }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Failed to process bulk acknowledge";
         console.error("[API] Error processing bulk acknowledge:", error);
         return NextResponse.json(
-            { success: false, message: error.message || "Failed to process bulk acknowledge" },
+            { success: false, message },
             { status: 500 }
         );
     }

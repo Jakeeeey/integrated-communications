@@ -29,7 +29,7 @@ function DocumentTransmittalContent() {
         isDetailLoading,
         isDetailModalOpen,
         setDetailModalOpen,
-        handleAcknowledgeWithUser,
+        handleAcknowledge,
         isAcknowledging,
         handleBulkAcknowledge,
         isBulkAcknowledging,
@@ -37,7 +37,7 @@ function DocumentTransmittalContent() {
         setIsBulkModalOpen,
         availableSenders,
         availableReceivers,
-        allUsers
+        allUsers,
     } = useDocumentTransmittal();
 
     const columns = React.useMemo(() => getDocumentTransmittalColumns(fetchDetail), [fetchDetail]);
@@ -105,13 +105,14 @@ function DocumentTransmittalContent() {
 
             {/* Detail Modal */}
             <TransmittalDetailModal
+                key={selectedTransmittal?.id || "detail-modal"}
                 isOpen={isDetailModalOpen}
                 onOpenChange={setDetailModalOpen}
                 header={selectedTransmittal}
                 details={selectedDetails}
                 status={transmittalStatus}
                 isLoading={isDetailLoading}
-                onAcknowledgeWithUser={handleAcknowledgeWithUser}
+                onAcknowledge={handleAcknowledge}
                 isAcknowledging={isAcknowledging}
                 availableUsers={allUsers}
             />
@@ -120,9 +121,9 @@ function DocumentTransmittalContent() {
             <BulkAcknowledgeModal
                 isOpen={isBulkModalOpen}
                 onOpenChange={setIsBulkModalOpen}
-                availableUsers={allUsers}
                 onBulkAcknowledge={handleBulkAcknowledge}
                 isAcknowledging={isBulkAcknowledging}
+                availableUsers={allUsers}
             />
         </div>
     );

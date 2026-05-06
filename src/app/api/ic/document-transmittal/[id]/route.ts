@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { DocumentTransmittalService } from "@/modules/integrated-communications/document-transmittal/services";
+import { decodeJwtPayload } from "@/lib/auth-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -55,18 +56,25 @@ export async function PATCH(
             return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
         }
 
+        const payload = decodeJwtPayload(token);
+        const userId = payload?.sub ? parseInt(payload.sub) : 0;
         const body = await req.json();
 
         if (action === "acknowledge") {
-            const { detailIds } = body;
-            const result = await DocumentTransmittalService.acknowledgeTransmittal(parseInt(id), detailIds);
+            const { detailIds, assignedUserId } = body;
+            const result = await DocumentTransmittalService.acknowledgeTransmittal(
+                parseInt(id), 
+                detailIds, 
+                assignedUserId || userId,
+                userId
+            );
             if (result.success) return NextResponse.json(result);
             return NextResponse.json(result, { status: 400 });
         }
 
         if (action === "reassign") {
-            const { detailIds, newUserId } = body;
-            const result = await DocumentTransmittalService.reassignTransmittal(parseInt(id), detailIds, newUserId);
+            const { detailIds } = body;
+            const result = await DocumentTransmittalService.reassignTransmittal(parseInt(id), detailIds, userId);
             if (result.success) return NextResponse.json(result);
             return NextResponse.json(result, { status: 400 });
         }

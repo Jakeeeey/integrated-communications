@@ -15,9 +15,8 @@ import { getTransmittalDetailColumns } from "@/modules/integrated-communications
 import { DocumentTransmittalHeader, DocumentTransmittalDetail, TransmittalStatus } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { formatDateTime, cn } from "@/lib/utils";
-import { FileText, User, Calendar, CheckSquare, Loader2, Send } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
+import { FileText, User, Calendar, CheckSquare, Loader2 } from "lucide-react";
 
 interface TransmittalDetailModalProps {
     isOpen: boolean;
@@ -26,7 +25,7 @@ interface TransmittalDetailModalProps {
     details: DocumentTransmittalDetail[];
     status: TransmittalStatus | null;
     isLoading: boolean;
-    onAcknowledgeWithUser: (id: number, detailIds: number[], assignedUserId: number, originalReceiverId: number) => Promise<boolean>;
+    onAcknowledge: (id: number, detailIds: number[], assignedUserId: number, originalReceiverId: number) => Promise<boolean>;
     isAcknowledging: boolean;
     availableUsers?: { label: string; value: string }[];
 }
@@ -38,7 +37,7 @@ export const TransmittalDetailModal = ({
     details,
     status,
     isLoading,
-    onAcknowledgeWithUser,
+    onAcknowledge,
     isAcknowledging,
     availableUsers = []
 }: TransmittalDetailModalProps) => {
@@ -49,7 +48,8 @@ export const TransmittalDetailModal = ({
     const handleAcknowledgeConfirm = async () => {
         if (!header || !acknowledgeUserId) return;
         const ids = selectedRows.map(r => r.id);
-        const success = await onAcknowledgeWithUser(header.id, ids, parseInt(acknowledgeUserId), header.receiverId);
+        const assignedUserId = parseInt(acknowledgeUserId);
+        const success = await onAcknowledge(header.id, ids, assignedUserId, header.receiverId);
         if (success) {
             setSelectedRows([]);
             setAcknowledgePopoverOpen(false);
@@ -190,10 +190,10 @@ export const TransmittalDetailModal = ({
                                         Acknowledge Receipt
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent align="end" className="w-80 p-4 space-y-4">
+                                <PopoverContent align="end" className="w-80 p-4 space-y-4 shadow-xl border-primary/10">
                                     <div className="space-y-1.5">
                                         <h4 className="font-semibold leading-none">Who is acknowledging?</h4>
-                                        <p className="text-xs text-muted-foreground">Select the user who is actually taking ownership of the {selectedRows.length} selected receipt(s).</p>
+                                        <p className="text-xs text-muted-foreground">Select the user who will take ownership of the {selectedRows.length} selected receipt(s).</p>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-medium">Assignee</label>
