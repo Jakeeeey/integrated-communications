@@ -5,7 +5,7 @@ import { useDocumentTransmittal } from "@/modules/integrated-communications/docu
 import { DataTable } from "@/components/ui/new-data-table";
 import { getDocumentTransmittalColumns } from "@/modules/integrated-communications/document-transmittal/components/DocumentTransmittalColumns";
 import { TransmittalDetailModal } from "@/modules/integrated-communications/document-transmittal/components/TransmittalDetailModal";
-import { RefreshCcw, AlertCircle, CheckSquare } from "lucide-react";
+import { RefreshCcw, AlertCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DocumentTransmittalFilters } from "@/modules/integrated-communications/document-transmittal/components/DocumentTransmittalFilters";
@@ -60,8 +60,8 @@ function DocumentTransmittalContent() {
                             onClick={() => setIsBulkModalOpen(true)}
                             className="gap-2 rounded-lg font-bold shadow-sm"
                         >
-                            <CheckSquare className="h-4 w-4" />
-                            Acknowledge
+                            <Send className="h-4 w-4" />
+                            Send
                         </Button>
                         <Button 
                             variant="outline" 
@@ -114,7 +114,6 @@ function DocumentTransmittalContent() {
                 isLoading={isDetailLoading}
                 onAcknowledge={handleAcknowledge}
                 isAcknowledging={isAcknowledging}
-                availableUsers={allUsers}
             />
 
             {/* Global Bulk Acknowledge Modal */}
