@@ -14,7 +14,8 @@ import {
     DocumentTransmittalHeader, 
     DocumentTransmittalDetail, 
     DocumentTransmittalListItem,
-    TransmittalStatus 
+    TransmittalStatus,
+    SalesInvoice
 } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.types";
 import { z } from "zod";
 
@@ -276,7 +277,8 @@ export class DocumentTransmittalService {
             const reassignedDetails = (detailsRes.data || []).filter((d: DocumentTransmittalDetail) => detailIds.includes(d.id));
 
             for (const detail of reassignedDetails) {
-                const postDispatchInvoiceId = (detail.invoice as any)?.id || detail.invoiceId;
+                // detail.invoice is SalesInvoice, but it might have been joined with post_dispatch_invoices id in some contexts
+                const postDispatchInvoiceId = (detail.invoice as SalesInvoice & { id?: number })?.id || detail.invoiceId;
                 if (postDispatchInvoiceId) {
                     await DocumentTransmittalRepo.updateInvoiceAt(postDispatchInvoiceId, newUserId);
                 }
@@ -300,8 +302,8 @@ export class DocumentTransmittalService {
     static async bulkAcknowledgeWithUser(details: { id: number; headerId: number | null; salesInvoiceId?: number }[], targetUserId: number, performingUserId?: number) {
         try {
             // 1. Separate "Existing" (with header) from "Fresh" (no header) invoices
-            const existingDetails = details.filter(d => d.headerId !== null) as { id: number; headerId: number }[];
-            const freshInvoices = details.filter(d => d.headerId === null);
+            const existingDetails = details.filter((d): d is { id: number; headerId: number; salesInvoiceId?: number } => d.headerId !== null);
+            const freshInvoices = details.filter((d): d is { id: number; headerId: null; salesInvoiceId: number } => d.headerId === null && d.salesInvoiceId !== undefined);
 
             // 2. Handle Existing Details (Reassign/Acknowledge)
             const groupedExisting = existingDetails.reduce((acc, curr) => {
@@ -334,7 +336,7 @@ export class DocumentTransmittalService {
                 // Create detail records linking this header to the SALES_INVOICE
                 const detailPayload = freshInvoices.map(inv => ({
                     document_transmittal_id: newHeaderId,
-                    invoice_id: inv.salesInvoiceId // Corrected to use Sales Invoice PK
+                    invoice_id: inv.salesInvoiceId
                 }));
                 await DocumentTransmittalRepo.createDetails(detailPayload);
 
@@ -345,7 +347,7 @@ export class DocumentTransmittalService {
             }
 
             return { success: true, message: "Handover completed successfully" };
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(`[DocumentTransmittalService] Bulk Acknowledge error:`, error);
             return {
                 success: false,

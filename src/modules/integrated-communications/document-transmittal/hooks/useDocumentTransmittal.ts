@@ -185,7 +185,7 @@ export const useDocumentTransmittal = () => {
     /**
      * Executes bulk acknowledgment across multiple headers.
      */
-    const handleBulkAcknowledge = useCallback(async (details: { id: number; headerId: number }[], assignedUserId?: number) => {
+    const handleBulkAcknowledge = useCallback(async (details: { id: number; headerId: number | null; salesInvoiceId?: number }[], assignedUserId?: number) => {
         if (details.length === 0) return false;
 
         setIsBulkAcknowledging(true);

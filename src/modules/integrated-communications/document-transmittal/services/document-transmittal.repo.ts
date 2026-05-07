@@ -18,6 +18,18 @@ const STATIC_TOKEN = process.env.NEXT_PUBLIC_DIRECTUS_STATIC_TOKEN || process.en
  *   - invoice_id JOIN sales_invoice → { invoice_id, invoice_no, customer_code, net_amount, ... }
  */
 
+interface DirectusError {
+    message: string;
+    extensions?: {
+        code: string;
+    };
+}
+
+interface DirectusErrorResponse {
+    errors?: DirectusError[];
+    message?: string;
+}
+
 export class DocumentTransmittalRepo {
     /**
      * Fetches document transmittal headers with complex server-side filtering.
@@ -224,8 +236,8 @@ export class DocumentTransmittalRepo {
         });
 
         if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            const errorMessage = (err as any)?.errors?.[0]?.message || (err as any)?.message || "Failed to create details";
+            const err = await response.json().catch(() => ({})) as DirectusErrorResponse;
+            const errorMessage = err.errors?.[0]?.message || err.message || "Failed to create details";
             throw new Error(`REPO_ERROR: ${errorMessage}`);
         }
 
