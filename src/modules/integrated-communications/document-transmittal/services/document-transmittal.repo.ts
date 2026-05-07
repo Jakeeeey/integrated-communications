@@ -30,6 +30,23 @@ interface DirectusErrorResponse {
     message?: string;
 }
 
+interface PostDispatchInvoice {
+    id: number;
+    invoiceAt: number;
+    isCleared: boolean;
+    status: string;
+    invoice_id: {
+        invoice_id: number;
+        [key: string]: unknown;
+    };
+}
+
+interface DirectusFilter {
+    _and?: Record<string, unknown>[];
+    _or?: Record<string, unknown>[];
+    [key: string]: unknown;
+}
+
 export class DocumentTransmittalRepo {
     /**
      * Fetches document transmittal headers with complex server-side filtering.
@@ -275,6 +292,7 @@ export class DocumentTransmittalRepo {
 
     /**
      * Fetches pending invoices assigned to a user from the post_dispatch_invoices table.
+     * ONLY shows invoices that have been formally acknowledged (receivedAt is not null).
      */
     static async fetchPendingDetails(receiverId?: number) {
         const fields = [
@@ -282,15 +300,29 @@ export class DocumentTransmittalRepo {
             "invoiceAt",
             "isCleared",
             "status",
-            "invoice_id.*" // Join everything from sales_invoice
+            "invoice_id.*"
         ].join(",");
 
+        // We filter for invoices where invoiceAt matches the user
+        // AND there is NO transmittal detail for this invoice that is still pending acknowledgment by this user.
         let url = `${API_BASE_URL}/items/post_dispatch_invoices?fields=${fields}&limit=-1`;
         
-        if (receiverId) {
-            // Filter by the user currently holding the invoice
-            url += `&filter[invoiceAt][_eq]=${receiverId}`;
+        const filters: DirectusFilter = {
+            _and: []
+        };
+
+        if (receiverId && filters._and) {
+            filters._and.push({ invoiceAt: { _eq: receiverId } });
+            
+            // Logic: Don't show if there's a transmittal detail for the same sales_invoice 
+            // that is assigned to me but NOT YET RECEIVED.
+            // Note: This assumes document_transmittal_details is linked to sales_invoice via invoice_id.
+            // We use a "Deep Filter" or handle it via a cleaner query if Directus allows.
+            // For now, we'll fetch and filter in the service OR use a more complex Directus filter.
         }
+
+        const filterQuery = encodeURIComponent(JSON.stringify(filters));
+        url += `&filter=${filterQuery}`;
 
         const response = await fetch(url, {
             headers: { Authorization: `Bearer ${STATIC_TOKEN}` },
@@ -301,7 +333,37 @@ export class DocumentTransmittalRepo {
             throw new Error(`Failed to fetch pending invoices: ${response.statusText}`);
         }
 
-        return response.json();
+        const result = await response.json();
+        let invoices: PostDispatchInvoice[] = result.data || [];
+
+        // If we have a receiverId, we do an additional check to filter out unacknowledged ones
+        if (receiverId && invoices.length > 0) {
+            const invoiceIds = invoices.map((inv) => inv.invoice_id.invoice_id);
+            
+            // Fetch any PENDING transmittal details for these invoices where the user is the receiver
+            const pendingDetailsUrl = `${API_BASE_URL}/items/document_transmittal_details?filter=` + encodeURIComponent(JSON.stringify({
+                _and: [
+                    { invoice_id: { _in: invoiceIds } },
+                    { document_transmittal_id: { receiver_id: { _eq: receiverId } } },
+                    { receivedAt: { _null: true } }
+                ]
+            })) + `&fields=invoice_id`;
+
+            const pendingRes = await fetch(pendingDetailsUrl, {
+                headers: { Authorization: `Bearer ${STATIC_TOKEN}` },
+                cache: "no-store",
+            });
+            
+            if (pendingRes.ok) {
+                const pendingData = await pendingRes.json();
+                const pendingInvoiceIds = new Set<number>((pendingData.data || []).map((d: { invoice_id: number }) => d.invoice_id));
+                
+                // Exclude invoices that have a pending transmittal
+                invoices = invoices.filter((inv) => !pendingInvoiceIds.has(inv.invoice_id.invoice_id));
+            }
+        }
+
+        return { data: invoices };
     }
 
     /**

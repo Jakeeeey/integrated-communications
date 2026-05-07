@@ -8,8 +8,6 @@ import {
     DialogTitle,
     DialogFooter
 } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Combobox } from "./Combobox";
 import { DataTable } from "@/components/ui/new-data-table";
 import { getTransmittalDetailColumns } from "@/modules/integrated-communications/document-transmittal/components/TransmittalDetailColumns";
 import { DocumentTransmittalHeader, DocumentTransmittalDetail, TransmittalStatus } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.types";
@@ -27,7 +25,6 @@ interface TransmittalDetailModalProps {
     isLoading: boolean;
     onAcknowledge: (id: number, detailIds: number[], assignedUserId: number, originalReceiverId: number) => Promise<boolean>;
     isAcknowledging: boolean;
-    availableUsers?: { label: string; value: string }[];
 }
 
 export const TransmittalDetailModal = ({
@@ -39,21 +36,19 @@ export const TransmittalDetailModal = ({
     isLoading,
     onAcknowledge,
     isAcknowledging,
-    availableUsers = []
 }: TransmittalDetailModalProps) => {
     const [selectedRows, setSelectedRows] = useState<DocumentTransmittalDetail[]>([]);
-    const [acknowledgeUserId, setAcknowledgeUserId] = useState<string>("");
-    const [isAcknowledgePopoverOpen, setAcknowledgePopoverOpen] = useState(false);
 
     const handleAcknowledgeConfirm = async () => {
-        if (!header || !acknowledgeUserId) return;
+        if (!header || selectedRows.length === 0) return;
+        
         const ids = selectedRows.map(r => r.id);
-        const assignedUserId = parseInt(acknowledgeUserId);
+        // Automatically use the receiverId of the header as the acknowledging user
+        const assignedUserId = header.receiverId;
+        
         const success = await onAcknowledge(header.id, ids, assignedUserId, header.receiverId);
         if (success) {
             setSelectedRows([]);
-            setAcknowledgePopoverOpen(false);
-            setAcknowledgeUserId("");
         }
     };
 
@@ -180,41 +175,18 @@ export const TransmittalDetailModal = ({
                         </Button>
 
                         {!isFullyAcknowledged ? (
-                            <Popover open={isAcknowledgePopoverOpen} onOpenChange={setAcknowledgePopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button 
-                                        disabled={selectedRows.length === 0 || isAcknowledging}
-                                        className="font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all"
-                                    >
-                                        <CheckSquare className="mr-2 h-4 w-4" />
-                                        Acknowledge Receipt
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent align="end" className="w-80 p-4 space-y-4 shadow-xl border-primary/10">
-                                    <div className="space-y-1.5">
-                                        <h4 className="font-semibold leading-none">Who is acknowledging?</h4>
-                                        <p className="text-xs text-muted-foreground">Select the user who will take ownership of the {selectedRows.length} selected receipt(s).</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium">Assignee</label>
-                                        <Combobox
-                                            options={availableUsers}
-                                            value={acknowledgeUserId}
-                                            onValueChange={setAcknowledgeUserId}
-                                            placeholder="Search active users..."
-                                            className="w-full"
-                                        />
-                                    </div>
-                                    <Button 
-                                        className="w-full font-bold" 
-                                        disabled={!acknowledgeUserId || isAcknowledging}
-                                        onClick={handleAcknowledgeConfirm}
-                                    >
-                                        {isAcknowledging ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
-                                        Confirm & Acknowledge
-                                    </Button>
-                                </PopoverContent>
-                            </Popover>
+                            <Button 
+                                disabled={selectedRows.length === 0 || isAcknowledging}
+                                onClick={handleAcknowledgeConfirm}
+                                className="font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all"
+                            >
+                                {isAcknowledging ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <CheckSquare className="mr-2 h-4 w-4" />
+                                )}
+                                Acknowledge Receipt
+                            </Button>
                         ) : (
                             <Button 
                                 disabled
