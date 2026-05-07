@@ -2,6 +2,7 @@ import { DocumentTransmittalRepo } from "./document-transmittal.repo";
 import { 
     mapHeaderToListItem, 
     deriveTransmittalStatus,
+    getNextTransmittalNo,
     DirectusHeaderRaw,
     DirectusDetailRaw
 } from "./document-transmittal.helpers";
@@ -254,13 +255,14 @@ export class DocumentTransmittalService {
                     : (originalHeader.sender_id as number) || 0
             );
 
-            // 2. Create the new header — keep the same transmittal number
-            const newTransmittalNo = originalHeader.document_transmittal_no || null;
+            // 2. Create the new header — generate a NEW incremented number
+            const latestNo = await DocumentTransmittalRepo.fetchLatestTransmittalNo();
+            const nextNo = getNextTransmittalNo(latestNo);
             
             const newHeaderRes = await DocumentTransmittalRepo.createHeader({
                 sender_id: newSenderId,
                 receiver_id: newUserId,
-                document_transmittal_no: newTransmittalNo
+                document_transmittal_no: nextNo
             });
 
             const newHeaderId = newHeaderRes.data.id;
@@ -295,31 +297,59 @@ export class DocumentTransmittalService {
      * Bulks acknowledges (and optionally reassigns) details from potentially multiple original headers.
      * Groups details by their original header ID to preserve sender information.
      */
-    static async bulkAcknowledgeWithUser(details: { id: number; headerId: number }[], targetUserId: number, performingUserId?: number) {
+    static async bulkAcknowledgeWithUser(details: { id: number; headerId: number | null; salesInvoiceId?: number }[], targetUserId: number, performingUserId?: number) {
         try {
-            // Group detail IDs by their original header ID
-            const groupedDetails = details.reduce((acc, curr) => {
+            // 1. Separate "Existing" (with header) from "Fresh" (no header) invoices
+            const existingDetails = details.filter(d => d.headerId !== null) as { id: number; headerId: number }[];
+            const freshInvoices = details.filter(d => d.headerId === null);
+
+            // 2. Handle Existing Details (Reassign/Acknowledge)
+            const groupedExisting = existingDetails.reduce((acc, curr) => {
                 if (!acc[curr.headerId]) acc[curr.headerId] = [];
                 acc[curr.headerId].push(curr.id);
                 return acc;
             }, {} as Record<number, number[]>);
 
-            for (const [headerIdStr, detailIds] of Object.entries(groupedDetails)) {
+            for (const [headerIdStr, detailIds] of Object.entries(groupedExisting)) {
                 const headerId = parseInt(headerIdStr);
-
-                // Acknowledge (and smart-reassign if needed) under each group
                 const ackRes = await this.acknowledgeTransmittal(headerId, detailIds, targetUserId, performingUserId);
-                if (!ackRes.success) {
-                    throw new Error(`Failed to acknowledge some invoices: ${ackRes.message}`);
+                if (!ackRes.success) throw new Error(`Failed to process existing transmittal: ${ackRes.message}`);
+            }
+
+            // 3. Handle Fresh Invoices (Initial Assignment)
+            if (freshInvoices.length > 0) {
+                // Fetch latest to increment
+                const latestNo = await DocumentTransmittalRepo.fetchLatestTransmittalNo();
+                const nextNo = getNextTransmittalNo(latestNo);
+
+                // Create a new header from Me (performingUserId) to Target
+                const newHeaderRes = await DocumentTransmittalRepo.createHeader({
+                    sender_id: performingUserId || 0,
+                    receiver_id: targetUserId,
+                    document_transmittal_no: nextNo 
+                });
+
+                const newHeaderId = newHeaderRes.data.id;
+
+                // Create detail records linking this header to the SALES_INVOICE
+                const detailPayload = freshInvoices.map(inv => ({
+                    document_transmittal_id: newHeaderId,
+                    invoice_id: inv.salesInvoiceId // Corrected to use Sales Invoice PK
+                }));
+                await DocumentTransmittalRepo.createDetails(detailPayload);
+
+                // Sync invoiceAt field in POST_DISPATCH_INVOICES
+                for (const inv of freshInvoices) {
+                    await DocumentTransmittalRepo.updateInvoiceAt(inv.id, targetUserId);
                 }
             }
 
-            return { success: true, message: "Bulk acknowledgment complete" };
-        } catch (error) {
+            return { success: true, message: "Handover completed successfully" };
+        } catch (error: any) {
             console.error(`[DocumentTransmittalService] Bulk Acknowledge error:`, error);
             return {
                 success: false,
-                message: error instanceof Error ? error.message : "An unexpected error occurred during bulk acknowledgment"
+                message: error instanceof Error ? error.message : "An unexpected error occurred during handover"
             };
         }
     }

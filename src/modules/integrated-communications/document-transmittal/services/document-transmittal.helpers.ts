@@ -92,3 +92,26 @@ export function mapHeaderToListItem(
         status: deriveTransmittalStatus(header.receivedAt, totalInvoices, acknowledgedInvoices),
     };
 }
+
+/**
+ * Generates the next transmittal number based on the current highest.
+ * Example: "DT-00271" -> "DT-00272"
+ */
+export function getNextTransmittalNo(currentNo: string | null): string {
+    const DEFAULT_NO = "DT-00001";
+    if (!currentNo) return DEFAULT_NO;
+
+    const parts = currentNo.split("-");
+    if (parts.length < 2) return DEFAULT_NO;
+
+    const prefix = parts[0];
+    const numericPart = parseInt(parts[1]);
+
+    if (isNaN(numericPart)) return DEFAULT_NO;
+
+    const nextNumeric = numericPart + 1;
+    // Pad with zeros to maintain 5-digit format
+    const paddedNumeric = nextNumeric.toString().padStart(5, "0");
+
+    return `${prefix}-${paddedNumeric}`;
+}

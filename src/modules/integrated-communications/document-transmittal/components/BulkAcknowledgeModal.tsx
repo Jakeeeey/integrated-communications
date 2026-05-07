@@ -9,15 +9,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 interface PendingDetail {
     id: number;
-    receivedAt: string | null;
-    document_transmittal_id: {
+    receivedAt?: string | null;
+    document_transmittal_id?: {
         id: number;
-        document_transmittal_no: string;
-        receiver_id: {
+        document_transmittal_no?: string;
+        receiver_id?: {
             user_fname: string;
             user_lname: string;
         } | null;
-    };
+    } | null;
     invoice_id: {
         invoice_id: number;
         invoice_no: string;
@@ -31,7 +31,7 @@ interface BulkAcknowledgeModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     availableUsers: { label: string; value: string }[];
-    onBulkAcknowledge: (details: { id: number; headerId: number }[], assignedUserId: number) => Promise<boolean>;
+    onBulkAcknowledge: (details: { id: number; headerId: number | null }[], assignedUserId: number) => Promise<boolean>;
     isAcknowledging: boolean;
 }
 
@@ -74,8 +74,9 @@ export const BulkAcknowledgeModal = ({
         if (selectedRows.length === 0 || !selectedUserId) return;
         
         const payload = selectedRows.map(row => ({
-            id: row.id,
-            headerId: row.document_transmittal_id.id
+            id: row.id, // post_dispatch_invoices.id
+            headerId: row.document_transmittal_id?.id || null,
+            salesInvoiceId: row.invoice_id.invoice_id // actual sales_invoice PK
         }));
 
         const success = await onBulkAcknowledge(payload, parseInt(selectedUserId));

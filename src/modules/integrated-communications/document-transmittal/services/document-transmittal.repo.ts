@@ -209,6 +209,30 @@ export class DocumentTransmittalRepo {
     }
 
     /**
+     * Creates new detail rows.
+     */
+    static async createDetails(details: { document_transmittal_id: number; invoice_id: number }[]) {
+        const url = `${API_BASE_URL}/items/document_transmittal_details`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${STATIC_TOKEN}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(details),
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            const errorMessage = (err as any)?.errors?.[0]?.message || (err as any)?.message || "Failed to create details";
+            throw new Error(`REPO_ERROR: ${errorMessage}`);
+        }
+
+        return await response.json();
+    }
+
+    /**
      * Batch-updates detail rows to point to a new header ID.
      * Used when reassigning selected receipts.
      */
@@ -238,30 +262,22 @@ export class DocumentTransmittalRepo {
     }
 
     /**
-     * Fetches all pending transmittal details.
-     * Optionally filtered by a specific receiver.
+     * Fetches pending invoices assigned to a user from the post_dispatch_invoices table.
      */
     static async fetchPendingDetails(receiverId?: number) {
         const fields = [
             "id",
-            "receivedAt",
-            "document_transmittal_id.id",
-            "document_transmittal_id.document_transmittal_no",
-            "document_transmittal_id.receiver_id.user_fname",
-            "document_transmittal_id.receiver_id.user_lname",
-            "invoice_id.invoice_id",
-            "invoice_id.invoice_no",
-            "invoice_id.invoice_date",
-            "invoice_id.net_amount",
-            "invoice_id.customer_code",
-            "invoice_id.invoiceAt"
+            "invoiceAt",
+            "isCleared",
+            "status",
+            "invoice_id.*" // Join everything from sales_invoice
         ].join(",");
 
-        let url = `${API_BASE_URL}/items/document_transmittal_details?fields=${fields}&filter[receivedAt][_null]=true&limit=-1`;
+        let url = `${API_BASE_URL}/items/post_dispatch_invoices?fields=${fields}&limit=-1`;
         
         if (receiverId) {
             // Filter by the user currently holding the invoice
-            url += `&filter[invoice_id][invoiceAt][_eq]=${receiverId}`;
+            url += `&filter[invoiceAt][_eq]=${receiverId}`;
         }
 
         const response = await fetch(url, {
@@ -270,10 +286,26 @@ export class DocumentTransmittalRepo {
         });
 
         if (!response.ok) {
-            throw new Error(`Failed to fetch pending details: ${response.statusText}`);
+            throw new Error(`Failed to fetch pending invoices: ${response.statusText}`);
         }
 
         return response.json();
+    }
+
+    /**
+     * Fetches the latest transmittal number to support incrementing.
+     */
+    static async fetchLatestTransmittalNo() {
+        const url = `${API_BASE_URL}/items/document_transmittal_header?sort=-id&limit=1&fields=document_transmittal_no`;
+
+        const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${STATIC_TOKEN}` },
+            cache: "no-store",
+        });
+
+        if (!response.ok) return null;
+        const result = await response.json();
+        return result.data?.[0]?.document_transmittal_no || null;
     }
 
     /**
