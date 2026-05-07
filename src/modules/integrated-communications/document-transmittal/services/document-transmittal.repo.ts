@@ -7,6 +7,8 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const STATIC_TOKEN = process.env.NEXT_PUBLIC_DIRECTUS_STATIC_TOKEN || process.env.DIRECTUS_STATIC_TOKEN;
 
+import { toLocalISOString } from "../utils/helpers";
+
 /**
  * Directus response shape:
  *
@@ -180,12 +182,10 @@ export class DocumentTransmittalRepo {
                 "Authorization": `Bearer ${STATIC_TOKEN}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-                keys: detailIds,
-                data: {
-                    receivedAt: new Date().toISOString(),
-                },
-            }),
+            body: JSON.stringify(detailIds.map(id => ({
+                id,
+                receivedAt: toLocalISOString(),
+            }))),
         });
 
         if (!response.ok) {
