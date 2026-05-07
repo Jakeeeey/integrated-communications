@@ -3,7 +3,8 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { DocumentTransmittalDetail } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { formatDateTime } from "../utils/helpers";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock } from "lucide-react";
 
@@ -74,7 +75,7 @@ export const getTransmittalDetailColumns = (): ColumnDef<DocumentTransmittalDeta
                 return (
                     <div className="flex items-center gap-2 text-green-600 font-medium">
                         <CheckCircle2 className="h-4 w-4" />
-                        <span className="text-xs">{formatDateTime(new Date(receivedAt))}</span>
+                        <span className="text-xs">{formatDateTime(receivedAt)}</span>
                     </div>
                 );
             }

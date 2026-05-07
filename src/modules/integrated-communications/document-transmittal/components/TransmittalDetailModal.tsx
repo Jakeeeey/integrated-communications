@@ -13,7 +13,7 @@ import { getTransmittalDetailColumns } from "@/modules/integrated-communications
 import { DocumentTransmittalHeader, DocumentTransmittalDetail, TransmittalStatus } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "../utils/helpers";
 import { FileText, User, Calendar, CheckSquare, Loader2 } from "lucide-react";
 
 interface TransmittalDetailModalProps {
@@ -76,7 +76,7 @@ export const TransmittalDetailModal = ({
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-1.5">
                                     <Calendar className="h-4 w-4" />
-                                    {header?.createdAt ? formatDateTime(new Date(header.createdAt)) : "—"}
+                                    {formatDateTime(header?.createdAt)}
                                 </div>
                                 {(() => {
                                     let variant: "destructive" | "secondary" | "default" | "outline" = "outline";
@@ -140,7 +140,7 @@ export const TransmittalDetailModal = ({
                         </div>
                     </div>
 
-                    <div className="flex-1 min-h-0 relative">
+                    <div className="flex-1 min-h-0 relative [&_.flex.items-center.justify-between.px-2]:flex-nowrap [&_.flex.items-center.space-x-6]:space-x-2 [&_.flex.items-center.space-x-6]:gap-2 lg:[&_.flex.items-center.space-x-6]:gap-4">
                         <DataTable
                             columns={columns}
                             data={details}
