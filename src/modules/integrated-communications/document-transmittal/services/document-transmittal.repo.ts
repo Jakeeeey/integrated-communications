@@ -115,12 +115,7 @@ export class DocumentTransmittalRepo {
     static async fetchDetailsByHeaderId(headerId: number) {
         const fields = [
             "*",
-            "invoice_id.invoice_id", "invoice_id.invoice_no", "invoice_id.order_id",
-            "invoice_id.customer_code", "invoice_id.net_amount", "invoice_id.gross_amount",
-            "invoice_id.total_amount", "invoice_id.vat_amount", "invoice_id.discount_amount",
-            "invoice_id.invoice_date", "invoice_id.dispatch_date", "invoice_id.due_date",
-            "invoice_id.transaction_status", "invoice_id.payment_status",
-            "invoice_id.salesman_id", "invoice_id.branch_id", "invoice_id.remarks",
+            "invoice_id.*",
         ].join(",");
 
         const filter = encodeURIComponent(JSON.stringify({
