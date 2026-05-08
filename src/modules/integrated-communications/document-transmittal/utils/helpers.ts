@@ -45,3 +45,20 @@ export function toLocalISOString(date: Date = new Date()): string {
 
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
+
+/**
+ * formatDateOnly()
+ * Returns a localized date string without the time (e.g., Nov 28, 2026).
+ */
+export function formatDateOnly(dateInput: Date | string | null | undefined, locale: string = "en-PH"): string {
+  if (!dateInput) return "—";
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  if (!isValidDate(date)) return "—";
+
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  }).format(date);
+}
+

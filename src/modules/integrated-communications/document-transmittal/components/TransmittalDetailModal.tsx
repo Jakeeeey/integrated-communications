@@ -14,7 +14,8 @@ import { DocumentTransmittalHeader, DocumentTransmittalDetail, TransmittalStatus
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "../utils/helpers";
-import { FileText, User, Calendar, CheckSquare, Loader2 } from "lucide-react";
+import { FileText, User, Calendar, CheckSquare, Loader2, Printer } from "lucide-react";
+import { TransmittalPrintModal } from "./TransmittalPrintModal";
 
 interface TransmittalDetailModalProps {
     isOpen: boolean;
@@ -38,6 +39,7 @@ export const TransmittalDetailModal = ({
     isAcknowledging,
 }: TransmittalDetailModalProps) => {
     const [selectedRows, setSelectedRows] = useState<DocumentTransmittalDetail[]>([]);
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
     const handleAcknowledgeConfirm = async () => {
         if (!header || selectedRows.length === 0) return;
@@ -174,6 +176,15 @@ export const TransmittalDetailModal = ({
                             Close
                         </Button>
 
+                        <Button 
+                            variant="secondary"
+                            onClick={() => setIsPrintModalOpen(true)}
+                            className="gap-2"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Print
+                        </Button>
+
                         {!isFullyAcknowledged ? (
                             <Button 
                                 disabled={selectedRows.length === 0 || isAcknowledging}
@@ -199,6 +210,15 @@ export const TransmittalDetailModal = ({
                     </div>
                 </DialogFooter>
             </DialogContent>
+
+            {header && (
+                <TransmittalPrintModal
+                    open={isPrintModalOpen}
+                    onOpenChange={setIsPrintModalOpen}
+                    header={header}
+                    details={details}
+                />
+            )}
         </Dialog>
     );
 };

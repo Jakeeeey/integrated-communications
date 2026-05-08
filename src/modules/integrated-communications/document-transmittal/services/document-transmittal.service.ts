@@ -115,17 +115,52 @@ export class DocumentTransmittalService {
                     : { userId: 0, userFname: "Not specified", userMname: null, userLname: "" },
             };
 
+            // --- Manual Customer Lookup ---
+            // Since Directus isn't joining the customer name via customer_code reliably, 
+            // we'll fetch them manually in a batch.
+            const customerCodes = Array.from(new Set(
+                rawDetails.map((d) => (d.invoice_id as Record<string, unknown>)?.customer_code as string).filter(Boolean)
+            ));
+
+            const customerMap: Record<string, string> = {};
+            if (customerCodes.length > 0) {
+                try {
+                    const customerUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/items/customer?filter=` + 
+                        encodeURIComponent(JSON.stringify({ customer_code: { _in: customerCodes } })) + 
+                        `&fields=customer_code,customer_name,store_name&limit=-1`;
+                    
+                    const custRes = await fetch(customerUrl, {
+                        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_DIRECTUS_STATIC_TOKEN || process.env.DIRECTUS_STATIC_TOKEN}` },
+                        cache: "no-store"
+                    });
+
+                    if (custRes.ok) {
+                        const custData = await custRes.json();
+                        const customers = (custData.data || []) as Array<{ customer_code: string; customer_name: string; store_name: string }>;
+                        customers.forEach((c) => {
+                            // Prioritize store_name (which includes location) over customer_name
+                            customerMap[c.customer_code] = c.store_name || c.customer_name;
+                        });
+                    }
+                } catch (err) {
+                    console.error("[Service] Failed to fetch customer names:", err);
+                }
+            }
+
             const details: DocumentTransmittalDetail[] = rawDetails.map((d) => {
                 const inv = d.invoice_id as Record<string, unknown> | null;
+                const code = (inv?.customer_code as string) ?? null;
+                
                 return {
                     id: d.id,
                     documentTransmittalId: d.document_transmittal_id,
-                    invoiceId: inv ? (inv.invoice_id as number) : (d.invoice_id as number),
+                    invoiceId: (inv?.invoice_id as number) ?? (d.invoice_id as number),
                     receivedAt: d.receivedAt,
                     invoice: inv ? {
                         invoiceId: inv.invoice_id as number,
                         orderId: (inv.order_id as string) ?? null,
-                        customerCode: (inv.customer_code as string) ?? null,
+                        customerCode: code,
+                        customerName: customerMap[code || ""] || null,
                         invoiceNo: (inv.invoice_no as string) ?? null,
                         salesmanId: (inv.salesman_id as number) ?? null,
                         branchId: (inv.branch_id as number) ?? null,

@@ -55,11 +55,17 @@ export const getTransmittalDetailColumns = (): ColumnDef<DocumentTransmittalDeta
     {
         accessorKey: "invoice.customerCode",
         header: "Customer",
-        cell: ({ row }) => (
-            <Badge variant="outline" className="font-mono text-[10px]">
-                {row.original.invoice.customerCode || "WALK-IN"}
-            </Badge>
-        ),
+        cell: ({ row }) => {
+            const { customerCode, customerName } = row.original.invoice;
+            return (
+                <div className="flex flex-col">
+                    <span className="text-xs font-medium">{customerName || "N/A"}</span>
+                    <Badge variant="outline" className="w-fit font-mono text-[10px] opacity-70">
+                        {customerCode || "WALK-IN"}
+                    </Badge>
+                </div>
+            );
+        },
     },
     {
         accessorKey: "invoice.netAmount",

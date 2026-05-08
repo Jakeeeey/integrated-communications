@@ -19,6 +19,7 @@ export interface SalesInvoice {
     invoiceId: number;
     orderId: string | null;
     customerCode: string | null;
+    customerName?: string | null;
     invoiceNo: string | null;
     salesmanId: number | null;
     branchId: number | null;
