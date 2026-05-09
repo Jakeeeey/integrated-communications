@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { DocumentTransmittalHeader, DocumentTransmittalDetail } from "../types/document-transmittal.types";
 import { formatDateTime } from "./helpers";
+import QRCode from "qrcode";
 
 /**
  * generateTransmittalPDF()
@@ -21,6 +22,17 @@ export const generateTransmittalPDF = async (
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 15;
 
+    // --- Generate QR Code for Transmittal No ---
+    let qrDataUrl = "";
+    try {
+        qrDataUrl = await QRCode.toDataURL(header.documentTransmittalNo || "N/A", {
+            margin: 0,
+            scale: 4
+        });
+    } catch (err) {
+        console.error("[PDF] QR Generation failed:", err);
+    }
+
     // --- Header Section ---
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
@@ -31,6 +43,12 @@ export const generateTransmittalPDF = async (
     doc.setDrawColor(0);
     doc.setLineWidth(0.3);
     doc.line(margin, 24, pageWidth - margin, 24);
+
+    // --- QR Code (Top Right) ---
+    if (qrDataUrl) {
+        // Positioned at the top right, matching the header section height
+        doc.addImage(qrDataUrl, "PNG", pageWidth - margin - 22, 28, 22, 22);
+    }
 
     // --- Transmittal Info ---
     doc.setFontSize(9);
