@@ -2,10 +2,12 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { DocumentTransmittalHeader, DocumentTransmittalDetail } from "../types/document-transmittal.types";
 import { formatDateTime } from "./helpers";
+import QRCode from "qrcode";
 
 /**
  * generateTransmittalPDF()
- * Generates a professional PDF for a Document Transmittal.
+ * Generates a print-friendly PDF for a Document Transmittal.
+ * Avoids dark fills and heavy colors to minimize ink/toner usage.
  */
 export const generateTransmittalPDF = async (
     header: DocumentTransmittalHeader,
@@ -20,39 +22,70 @@ export const generateTransmittalPDF = async (
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 15;
 
+    // --- Generate QR Code for Transmittal No ---
+    let qrDataUrl = "";
+    try {
+        qrDataUrl = await QRCode.toDataURL(header.documentTransmittalNo || "N/A", {
+            margin: 0,
+            scale: 4
+        });
+    } catch (err) {
+        console.error("[PDF] QR Generation failed:", err);
+    }
+
     // --- Header Section ---
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
+    doc.setFontSize(14);
+    doc.setTextColor(0);
     doc.text("DOCUMENT TRANSMITTAL", pageWidth / 2, 20, { align: "center" });
 
+    // Single thin underline below title
     doc.setDrawColor(0);
-    doc.setLineWidth(0.5);
-    doc.line(margin, 25, pageWidth - margin, 25);
+    doc.setLineWidth(0.3);
+    doc.line(margin, 24, pageWidth - margin, 24);
+
+    // --- QR Code (Top Right) ---
+    if (qrDataUrl) {
+        // Positioned at the top right, matching the header section height
+        doc.addImage(qrDataUrl, "PNG", pageWidth - margin - 22, 28, 22, 22);
+    }
 
     // --- Transmittal Info ---
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("Transmittal Number:", margin, 35);
-    doc.setFont("helvetica", "normal");
-    doc.text(header.documentTransmittalNo || "N/A", margin + 40, 35);
+    doc.setFontSize(9);
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Date:", margin, 42);
-    doc.setFont("helvetica", "normal");
-    doc.text(formatDateTime(header.createdAt), margin + 40, 42);
+    const labelX = margin;
+    const valueX = margin + 38;
 
-    // --- Sender & Receiver ---
-    doc.setFont("helvetica", "bold");
-    doc.text("Sender:", margin, 52);
-    doc.setFont("helvetica", "normal");
+    const infoRows: [string, string][] = [
+        ["Transmittal No.:", header.documentTransmittalNo || "N/A"],
+        ["Date:", formatDateTime(header.createdAt)],
+    ];
+
+    let infoY = 32;
+    for (const [label, value] of infoRows) {
+        doc.setFont("helvetica", "bold");
+        doc.text(label, labelX, infoY);
+        doc.setFont("helvetica", "normal");
+        doc.text(value, valueX, infoY);
+        infoY += 7;
+    }
+
+    // --- Sender & Receiver (two-column layout) ---
+    const colMid = pageWidth / 2;
+
+    infoY += 2;
     const senderName = `${header.sender.userFname} ${header.sender.userLname}`;
-    doc.text(senderName, margin + 40, 52);
+    const receiverName = `${header.receiver.userFname} ${header.receiver.userLname}`;
 
     doc.setFont("helvetica", "bold");
-    doc.text("Receiver:", margin, 59);
+    doc.text("Sender:", labelX, infoY);
     doc.setFont("helvetica", "normal");
-    const receiverName = `${header.receiver.userFname} ${header.receiver.userLname}`;
-    doc.text(receiverName, margin + 40, 59);
+    doc.text(senderName, valueX, infoY);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Receiver:", colMid, infoY);
+    doc.setFont("helvetica", "normal");
+    doc.text(receiverName, colMid + 22, infoY);
 
     // --- Table Section ---
     const tableData = details.map((d) => [
@@ -62,46 +95,67 @@ export const generateTransmittalPDF = async (
     ]);
 
     autoTable(doc, {
-        startY: 70,
+        startY: infoY + 8,
         margin: { left: margin, right: margin },
         head: [["Invoice No.", "Invoice Date", "Customer Name"]],
         body: tableData,
         headStyles: {
-            fillColor: [31, 41, 55],
-            textColor: [255, 255, 255],
+            fillColor: false,           // No background fill
+            textColor: [0, 0, 0],
             fontStyle: "bold",
             halign: "left",
+            lineColor: [0, 0, 0],
+            lineWidth: { bottom: 0.3, top: 0.3, left: 0, right: 0 },
         },
         styles: {
             fontSize: 9,
-            cellPadding: 3,
+            cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+            textColor: [0, 0, 0],
+            lineColor: [200, 200, 200],
+            lineWidth: 0,               // No cell borders by default
         },
         columnStyles: {
-            0: { cellWidth: 40 },
+            0: { cellWidth: 42 },
             1: { cellWidth: 40 },
             2: { cellWidth: "auto" },
         },
+        // Subtle alternate row shading — very light gray, print-friendly
         alternateRowStyles: {
-            fillColor: [249, 250, 251],
+            fillColor: [245, 245, 245],
+        },
+        // Only draw bottom border on each row (minimal grid)
+        didDrawCell: (data) => {
+            if (data.section === "body") {
+                const { x, y, width, height } = data.cell;
+                doc.setDrawColor(220, 220, 220);
+                doc.setLineWidth(0.2);
+                doc.line(x, y + height, x + width, y + height);
+            }
         },
     });
 
     // --- Signatures ---
     // @ts-expect-error: jspdf-autotable adds lastAutoTable to jsPDF instance
-    const finalY = (doc as Record<string, unknown>).lastAutoTable.finalY + 20;
-    
-    doc.setFontSize(10);
+    const finalY = (doc as Record<string, unknown>).lastAutoTable.finalY + 15;
+
+    doc.setFontSize(9);
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.3);
+
+    // Released By
     doc.setFont("helvetica", "bold");
     doc.text("Released By:", margin, finalY);
-    doc.line(margin, finalY + 10, margin + 60, finalY + 10);
+    doc.line(margin, finalY + 10, margin + 65, finalY + 10);
     doc.setFont("helvetica", "normal");
     doc.text(senderName, margin, finalY + 15);
 
+    // Received By
+    const sigRightX = pageWidth - margin - 65;
     doc.setFont("helvetica", "bold");
-    doc.text("Received By:", pageWidth - margin - 60, finalY);
-    doc.line(pageWidth - margin - 60, finalY + 10, pageWidth - margin, finalY + 10);
+    doc.text("Received By:", sigRightX, finalY);
+    doc.line(sigRightX, finalY + 10, sigRightX + 65, finalY + 10);
     doc.setFont("helvetica", "normal");
-    doc.text(receiverName, pageWidth - margin - 60, finalY + 15);
+    doc.text(receiverName, sigRightX, finalY + 15);
 
     return doc;
 };
