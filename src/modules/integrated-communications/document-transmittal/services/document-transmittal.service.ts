@@ -1,4 +1,4 @@
-import { DocumentTransmittalRepo } from "./document-transmittal.repo";
+import { DocumentTransmittalRepo, PostDispatchInvoice } from "./document-transmittal.repo";
 import { 
     mapHeaderToListItem, 
     deriveTransmittalStatus,
@@ -201,6 +201,59 @@ export class DocumentTransmittalService {
             return { header, details, status };
         } catch (error) {
             console.error(`[DocumentTransmittalService] Error fetching detail for ID ${id}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fetches pending invoices for a specific receiver, resolving customer names.
+     */
+    static async getPendingInvoices(receiverId: number) {
+        try {
+            const response = await DocumentTransmittalRepo.fetchPendingDetails(receiverId);
+            const rawData = response.data || [];
+
+            // --- Manual Customer Lookup ---
+            const customerCodes = Array.from(new Set(
+                rawData.map((d: PostDispatchInvoice) => d.invoice_id?.customer_code as string).filter(Boolean)
+            ));
+
+            const customerMap: Record<string, string> = {};
+            if (customerCodes.length > 0) {
+                try {
+                    const customerUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/items/customer?filter=` + 
+                        encodeURIComponent(JSON.stringify({ customer_code: { _in: customerCodes } })) + 
+                        `&fields=customer_code,customer_name,store_name&limit=-1`;
+                    
+                    const custRes = await fetch(customerUrl, {
+                        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_DIRECTUS_STATIC_TOKEN || process.env.DIRECTUS_STATIC_TOKEN}` },
+                        cache: "no-store"
+                    });
+
+                    if (custRes.ok) {
+                        const custData = await custRes.json();
+                        (custData.data || []).forEach((c: Record<string, unknown>) => {
+                            customerMap[c.customer_code as string] = (c.store_name as string) || (c.customer_name as string);
+                        });
+                    }
+                } catch (err) {
+                    console.error("[Service] Failed to fetch customer names for pending:", err);
+                }
+            }
+
+            // Map and inject customer names
+            const enrichedData = rawData.map((d: PostDispatchInvoice) => {
+                const invoice = d.invoice_id;
+                if (invoice) {
+                    const code = invoice.customer_code as string;
+                    invoice.customer_name = customerMap[code] || null;
+                }
+                return d;
+            });
+
+            return enrichedData;
+        } catch (error) {
+            console.error("[Service] Error fetching pending invoices:", error);
             throw error;
         }
     }

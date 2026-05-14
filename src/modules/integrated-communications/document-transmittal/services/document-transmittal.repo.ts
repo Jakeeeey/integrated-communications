@@ -32,13 +32,15 @@ interface DirectusErrorResponse {
     message?: string;
 }
 
-interface PostDispatchInvoice {
+export interface PostDispatchInvoice {
     id: number;
     invoiceAt: number;
     isCleared: boolean;
     status: string;
     invoice_id: {
         invoice_id: number;
+        customer_code?: string;
+        customer_name?: string | null;
         [key: string]: unknown;
     };
 }
@@ -139,7 +141,7 @@ export class DocumentTransmittalRepo {
     }
 
     /**
-     * Fetches a single header by ID with full user joins.
+     * Fetches a single header by ID with full user joins..
      */
     static async fetchHeaderById(headerId: number) {
         const fields = [
