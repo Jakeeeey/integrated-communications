@@ -147,6 +147,40 @@ export class DocumentTransmittalService {
                 }
             }
 
+            // --- Manual Doc No Lookup ---
+            // Fetch doc_no from post_dispatch_plan via post_dispatch_invoices
+            const invoiceIds = Array.from(new Set(
+                rawDetails.map((d) => {
+                    const inv = d.invoice_id as Record<string, unknown> | null;
+                    return inv ? inv.invoice_id as number : d.invoice_id as number;
+                }).filter(Boolean)
+            ));
+
+            const docNoMap: Record<number, string> = {};
+            if (invoiceIds.length > 0) {
+                try {
+                    const docNoUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/items/post_dispatch_invoices?filter=` + 
+                        encodeURIComponent(JSON.stringify({ invoice_id: { _in: invoiceIds } })) + 
+                        `&fields=invoice_id,post_dispatch_plan_id.doc_no&limit=-1`;
+                    
+                    const docNoRes = await fetch(docNoUrl, {
+                        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_DIRECTUS_STATIC_TOKEN || process.env.DIRECTUS_STATIC_TOKEN}` },
+                        cache: "no-store"
+                    });
+
+                    if (docNoRes.ok) {
+                        const docNoData = await docNoRes.json();
+                        (docNoData.data || []).forEach((row: any) => {
+                            if (row.invoice_id && row.post_dispatch_plan_id?.doc_no) {
+                                docNoMap[row.invoice_id] = row.post_dispatch_plan_id.doc_no;
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error("[Service] Failed to fetch doc_no:", err);
+                }
+            }
+
             const details: DocumentTransmittalDetail[] = rawDetails.map((d) => {
                 const inv = d.invoice_id as Record<string, unknown> | null;
                 const code = (inv?.customer_code as string) ?? null;
@@ -162,6 +196,7 @@ export class DocumentTransmittalService {
                         customerCode: code,
                         customerName: customerMap[code || ""] || null,
                         invoiceNo: (inv.invoice_no as string) ?? null,
+                        docNo: docNoMap[inv.invoice_id as number] ?? null,
                         salesmanId: (inv.salesman_id as number) ?? null,
                         branchId: (inv.branch_id as number) ?? null,
                         invoiceDate: (inv.invoice_date as string) ?? null,
@@ -183,7 +218,7 @@ export class DocumentTransmittalService {
                         isReceipt: null, isPosted: null, isDispatched: null, isRemitted: null, isReplaced: null,
                     } : {
                         invoiceId: d.invoice_id as number,
-                        orderId: null, customerCode: null, invoiceNo: null, salesmanId: null,
+                        orderId: null, customerCode: null, invoiceNo: null, docNo: docNoMap[d.invoice_id as number] ?? null, salesmanId: null,
                         branchId: null, invoiceDate: null, dispatchDate: null, dueDate: null,
                         paymentTerms: null, transactionStatus: null, paymentStatus: null,
                         totalAmount: null, salesType: null, invoiceType: null, priceType: null,

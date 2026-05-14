@@ -297,7 +297,8 @@ export class DocumentTransmittalRepo {
             "invoiceAt",
             "isCleared",
             "status",
-            "invoice_id.*"
+            "invoice_id.*",
+            "post_dispatch_plan_id.doc_no"
         ].join(",");
 
         // We filter for invoices where invoiceAt matches the user
