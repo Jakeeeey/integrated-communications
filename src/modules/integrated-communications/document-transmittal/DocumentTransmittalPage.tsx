@@ -3,13 +3,13 @@
 import React from "react";
 import { useDocumentTransmittal } from "@/modules/integrated-communications/document-transmittal/hooks/useDocumentTransmittal";
 import { DataTable } from "@/components/ui/new-data-table";
-import { getDocumentTransmittalColumns } from "@/modules/integrated-communications/document-transmittal/components/DocumentTransmittalColumns";
-import { TransmittalDetailModal } from "@/modules/integrated-communications/document-transmittal/components/TransmittalDetailModal";
+import { getDocumentTransmittalColumns } from "@/modules/integrated-communications/document-transmittal/components/data-table/DocumentTransmittalColumns";
+import { TransmittalDetailModal } from "@/modules/integrated-communications/document-transmittal/components/modals/TransmittalDetailModal";
 import { RefreshCcw, AlertCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DocumentTransmittalFilters } from "@/modules/integrated-communications/document-transmittal/components/DocumentTransmittalFilters";
-import { BulkAcknowledgeModal } from "@/modules/integrated-communications/document-transmittal/components/BulkAcknowledgeModal";
+import { DocumentTransmittalFilters } from "@/modules/integrated-communications/document-transmittal/components/filters/DocumentTransmittalFilters";
+import { BulkAcknowledgeModal } from "@/modules/integrated-communications/document-transmittal/components/modals/BulkAcknowledgeModal";
 import { DocumentTransmittalFilterProvider } from "./context/DocumentTransmittalFilterContext";
 
 /**

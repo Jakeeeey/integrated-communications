@@ -206,6 +206,58 @@ export class DocumentTransmittalService {
     }
 
     /**
+     * Fetches pending invoices for a specific receiver, resolving customer names.
+     */
+    static async getPendingInvoices(receiverId: number) {
+        try {
+            const response = await DocumentTransmittalRepo.fetchPendingDetails(receiverId);
+            const rawData = response.data || [];
+
+            // --- Manual Customer Lookup ---
+            const customerCodes = Array.from(new Set(
+                rawData.map((d: any) => d.invoice_id?.customer_code).filter(Boolean)
+            ));
+
+            const customerMap: Record<string, string> = {};
+            if (customerCodes.length > 0) {
+                try {
+                    const customerUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/items/customer?filter=` + 
+                        encodeURIComponent(JSON.stringify({ customer_code: { _in: customerCodes } })) + 
+                        `&fields=customer_code,customer_name,store_name&limit=-1`;
+                    
+                    const custRes = await fetch(customerUrl, {
+                        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_DIRECTUS_STATIC_TOKEN || process.env.DIRECTUS_STATIC_TOKEN}` },
+                        cache: "no-store"
+                    });
+
+                    if (custRes.ok) {
+                        const custData = await custRes.json();
+                        (custData.data || []).forEach((c: any) => {
+                            customerMap[c.customer_code] = c.store_name || c.customer_name;
+                        });
+                    }
+                } catch (err) {
+                    console.error("[Service] Failed to fetch customer names for pending:", err);
+                }
+            }
+
+            // Map and inject customer names
+            const enrichedData = rawData.map((d: any) => {
+                if (d.invoice_id) {
+                    const code = d.invoice_id.customer_code;
+                    d.invoice_id.customer_name = customerMap[code] || null;
+                }
+                return d;
+            });
+
+            return enrichedData;
+        } catch (error) {
+            console.error("[Service] Error fetching pending invoices:", error);
+            throw error;
+        }
+    }
+
+    /**
      * Handles invoice acknowledgment OR reassignment depending on the target user.
      */
     static async acknowledgeTransmittal(id: number, detailIds: number[], targetUserId?: number, performingUserId?: number) {

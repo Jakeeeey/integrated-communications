@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckSquare, User } from "lucide-react";
-import { Combobox } from "./Combobox";
+import { Combobox } from "../Combobox";
 import { DataTable } from "@/components/ui/new-data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,6 +24,7 @@ interface PendingDetail {
         invoice_date: string | null;
         net_amount: number;
         customer_code: string;
+        customer_name?: string | null;
     };
 }
 
@@ -137,8 +138,9 @@ export const BulkAcknowledgeModal = ({
                 }
             },
             {
-                accessorKey: "invoice_id.customer_code",
-                header: "Customer",
+                accessorKey: "invoice_id.customer_name",
+                header: "Store Name",
+                cell: ({ row }) => row.original.invoice_id.customer_name || row.original.invoice_id.customer_code || "WALK-IN",
             },
             {
                 accessorKey: "invoice_id.net_amount",
@@ -154,7 +156,7 @@ export const BulkAcknowledgeModal = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden bg-background border-border/40 shadow-2xl">
+            <DialogContent className="sm:max-w-[1200px] max-w-4xl max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden bg-background border-border/40 shadow-2xl">
                 <DialogHeader className="p-6 pb-4 border-b border-border/40 bg-muted/20">
                     <DialogTitle className="text-xl font-semibold flex items-center gap-2">
                         <User className="h-5 w-5 text-primary" />

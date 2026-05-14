@@ -9,11 +9,11 @@ import {
     DialogFooter
 } from "@/components/ui/dialog";
 import { DataTable } from "@/components/ui/new-data-table";
-import { getTransmittalDetailColumns } from "@/modules/integrated-communications/document-transmittal/components/TransmittalDetailColumns";
+import { getTransmittalDetailColumns } from "@/modules/integrated-communications/document-transmittal/components/data-table/TransmittalDetailColumns";
 import { DocumentTransmittalHeader, DocumentTransmittalDetail, TransmittalStatus } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDateTime } from "../utils/helpers";
+import { formatDateTime } from "../../utils/helpers";
 import { FileText, User, Calendar, CheckSquare, Loader2, Printer } from "lucide-react";
 import { TransmittalPrintModal } from "./TransmittalPrintModal";
 

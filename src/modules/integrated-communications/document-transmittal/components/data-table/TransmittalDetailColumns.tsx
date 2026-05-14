@@ -4,7 +4,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DocumentTransmittalDetail } from "@/modules/integrated-communications/document-transmittal/types/document-transmittal.types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency } from "@/lib/utils";
-import { formatDateTime } from "../utils/helpers";
+import { formatDateTime } from "../../utils/helpers";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock } from "lucide-react";
 
@@ -53,16 +53,13 @@ export const getTransmittalDetailColumns = (): ColumnDef<DocumentTransmittalDeta
         ),
     },
     {
-        accessorKey: "invoice.customerCode",
-        header: "Customer",
+        accessorKey: "invoice.customerName",
+        header: "Store Name",
         cell: ({ row }) => {
             const { customerCode, customerName } = row.original.invoice;
             return (
                 <div className="flex flex-col">
-                    <span className="text-xs font-medium">{customerName || "N/A"}</span>
-                    <Badge variant="outline" className="w-fit font-mono text-[10px] opacity-70">
-                        {customerCode || "WALK-IN"}
-                    </Badge>
+                    <span className="text-xs">{customerName || "N/A"}</span>
                 </div>
             );
         },

@@ -9,8 +9,8 @@ import {
     DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { DocumentTransmittalHeader, DocumentTransmittalDetail } from "../types/document-transmittal.types";
-import { generateTransmittalPDF } from "../utils/generateTransmittalPDF";
+import { DocumentTransmittalHeader, DocumentTransmittalDetail } from "../../types/document-transmittal.types";
+import { generateTransmittalPDF } from "../../utils/generateTransmittalPDF";
 import { Printer, Download, Loader2, FileText } from "lucide-react";
 
 interface TransmittalPrintModalProps {
