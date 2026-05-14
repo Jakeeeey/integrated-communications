@@ -32,6 +32,7 @@ export const TransmittalUserInfoSchema = z.object({
 export const SalesInvoiceSchema = z.object({
     invoiceId: z.number(),
     invoiceNo: z.string().nullable(),
+    docNo: z.string().nullable().optional(),
     totalAmount: z.number().nullable(),
     customerCode: z.string().nullable(),
     // Add other fields as needed for specific validations

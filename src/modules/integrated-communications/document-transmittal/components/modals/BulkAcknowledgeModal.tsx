@@ -18,6 +18,9 @@ interface PendingDetail {
             user_lname: string;
         } | null;
     } | null;
+    post_dispatch_plan_id?: {
+        doc_no: string;
+    } | null;
     invoice_id: {
         invoice_id: number;
         invoice_no: string;
@@ -124,6 +127,15 @@ export const BulkAcknowledgeModal = ({
             {
                 accessorKey: "invoice_id.invoice_no",
                 header: "Invoice No.",
+            },
+            {
+                accessorKey: "post_dispatch_plan_id.doc_no",
+                header: "Doc No.",
+                cell: ({ row }) => (
+                    <span className="font-medium text-muted-foreground">
+                        {row.original.post_dispatch_plan_id?.doc_no || "N/A"}
+                    </span>
+                ),
             },
             {
                 accessorKey: "invoice_id.invoice_date",
