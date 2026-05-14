@@ -39,6 +39,8 @@ export interface PostDispatchInvoice {
     status: string;
     invoice_id: {
         invoice_id: number;
+        customer_code?: string;
+        customer_name?: string | null;
         [key: string]: unknown;
     };
 }
