@@ -141,7 +141,7 @@ export class DocumentTransmittalRepo {
     }
 
     /**
-     * Fetches a single header by ID with full user joins.
+     * Fetches a single header by ID with full user joins..
      */
     static async fetchHeaderById(headerId: number) {
         const fields = [
