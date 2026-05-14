@@ -1,4 +1,4 @@
-import { DocumentTransmittalRepo } from "./document-transmittal.repo";
+import { DocumentTransmittalRepo, PostDispatchInvoice } from "./document-transmittal.repo";
 import { 
     mapHeaderToListItem, 
     deriveTransmittalStatus,
@@ -215,7 +215,7 @@ export class DocumentTransmittalService {
 
             // --- Manual Customer Lookup ---
             const customerCodes = Array.from(new Set(
-                rawData.map((d: any) => d.invoice_id?.customer_code).filter(Boolean)
+                rawData.map((d: PostDispatchInvoice) => d.invoice_id?.customer_code as string).filter(Boolean)
             ));
 
             const customerMap: Record<string, string> = {};
@@ -232,8 +232,8 @@ export class DocumentTransmittalService {
 
                     if (custRes.ok) {
                         const custData = await custRes.json();
-                        (custData.data || []).forEach((c: any) => {
-                            customerMap[c.customer_code] = c.store_name || c.customer_name;
+                        (custData.data || []).forEach((c: Record<string, unknown>) => {
+                            customerMap[c.customer_code as string] = (c.store_name as string) || (c.customer_name as string);
                         });
                     }
                 } catch (err) {
@@ -242,10 +242,12 @@ export class DocumentTransmittalService {
             }
 
             // Map and inject customer names
-            const enrichedData = rawData.map((d: any) => {
-                if (d.invoice_id) {
-                    const code = d.invoice_id.customer_code;
-                    d.invoice_id.customer_name = customerMap[code] || null;
+            const enrichedData = rawData.map((d: PostDispatchInvoice) => {
+                const invoice = d.invoice_id;
+                if (invoice) {
+                    const code = invoice.customer_code as string;
+                    // @ts-expect-error: customer_name is injected dynamically
+                    invoice.customer_name = customerMap[code] || null;
                 }
                 return d;
             });

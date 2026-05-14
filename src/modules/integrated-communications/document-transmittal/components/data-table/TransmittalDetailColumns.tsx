@@ -5,7 +5,6 @@ import { DocumentTransmittalDetail } from "@/modules/integrated-communications/d
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency } from "@/lib/utils";
 import { formatDateTime } from "../../utils/helpers";
-import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock } from "lucide-react";
 
 /**
@@ -56,7 +55,7 @@ export const getTransmittalDetailColumns = (): ColumnDef<DocumentTransmittalDeta
         accessorKey: "invoice.customerName",
         header: "Store Name",
         cell: ({ row }) => {
-            const { customerCode, customerName } = row.original.invoice;
+            const { customerName } = row.original.invoice;
             return (
                 <div className="flex flex-col">
                     <span className="text-xs">{customerName || "N/A"}</span>

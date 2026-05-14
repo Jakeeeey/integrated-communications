@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { DocumentTransmittalRepo } from "@/modules/integrated-communications/document-transmittal/services/document-transmittal.repo";
 import { DocumentTransmittalService } from "@/modules/integrated-communications/document-transmittal/services/document-transmittal.service";
 import { decodeJwtPayload } from "@/lib/auth-utils";
 

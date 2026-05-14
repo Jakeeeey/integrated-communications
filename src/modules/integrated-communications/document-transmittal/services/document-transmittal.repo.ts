@@ -32,7 +32,7 @@ interface DirectusErrorResponse {
     message?: string;
 }
 
-interface PostDispatchInvoice {
+export interface PostDispatchInvoice {
     id: number;
     invoiceAt: number;
     isCleared: boolean;
