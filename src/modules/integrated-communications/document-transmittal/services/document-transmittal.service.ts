@@ -246,7 +246,6 @@ export class DocumentTransmittalService {
                 const invoice = d.invoice_id;
                 if (invoice) {
                     const code = invoice.customer_code as string;
-                    // @ts-expect-error: customer_name is injected dynamically
                     invoice.customer_name = customerMap[code] || null;
                 }
                 return d;
