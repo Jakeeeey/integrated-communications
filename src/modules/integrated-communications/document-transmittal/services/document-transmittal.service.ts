@@ -170,7 +170,7 @@ export class DocumentTransmittalService {
 
                     if (docNoRes.ok) {
                         const docNoData = await docNoRes.json();
-                        (docNoData.data || []).forEach((row: any) => {
+                        (docNoData.data || []).forEach((row: { invoice_id: number; post_dispatch_plan_id?: { doc_no: string } | null }) => {
                             if (row.invoice_id && row.post_dispatch_plan_id?.doc_no) {
                                 docNoMap[row.invoice_id] = row.post_dispatch_plan_id.doc_no;
                             }
