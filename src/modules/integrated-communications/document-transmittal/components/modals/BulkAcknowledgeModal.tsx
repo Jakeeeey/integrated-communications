@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckSquare, User } from "lucide-react";
+import { Loader2, CheckSquare, Printer, User } from "lucide-react";
 import { Combobox } from "../Combobox";
 import { DataTable } from "@/components/ui/new-data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TransmittalPrintModal } from "./TransmittalPrintModal";
+import {
+    DocumentTransmittalDetail,
+    DocumentTransmittalHeader,
+} from "../../types/document-transmittal.types";
 
 interface PendingDetail {
     id: number;
@@ -39,6 +44,11 @@ interface BulkAcknowledgeModalProps {
     isAcknowledging: boolean;
 }
 
+interface PrintData {
+    header: DocumentTransmittalHeader;
+    details: DocumentTransmittalDetail[];
+}
+
 export const BulkAcknowledgeModal = ({
     isOpen,
     onOpenChange,
@@ -50,6 +60,7 @@ export const BulkAcknowledgeModal = ({
     const [pendingDetails, setPendingDetails] = useState<PendingDetail[]>([]);
     const [selectedRows, setSelectedRows] = useState<PendingDetail[]>([]);
     const [selectedUserId, setSelectedUserId] = useState<string>("");
+    const [printData, setPrintData] = useState<PrintData | null>(null);
 
     const fetchPending = useCallback(async () => {
         setIsLoading(true);
@@ -87,6 +98,82 @@ export const BulkAcknowledgeModal = ({
         if (success) {
             onOpenChange(false);
         }
+    };
+
+    const handlePrint = () => {
+        if (selectedRows.length === 0) return;
+
+        const selectedReceiver = availableUsers.find(
+            (user) => user.value === selectedUserId
+        );
+        const [receiverFname, ...receiverLnameParts] = (
+            selectedReceiver?.label || "Not selected"
+        ).split(" ");
+
+        setPrintData({
+            header: {
+                id: 0,
+                documentTransmittalNo: null,
+                senderId: 0,
+                receiverId: selectedUserId ? Number(selectedUserId) : 0,
+                createdAt: new Date().toISOString(),
+                receivedAt: null,
+                sender: {
+                    userId: 0,
+                    userFname: "Current",
+                    userMname: null,
+                    userLname: "User",
+                },
+                receiver: {
+                    userId: selectedUserId ? Number(selectedUserId) : 0,
+                    userFname: receiverFname,
+                    userMname: null,
+                    userLname: receiverLnameParts.join(" "),
+                },
+            },
+            details: selectedRows.map((row) => ({
+                id: row.id,
+                documentTransmittalId: 0,
+                invoiceId: row.invoice_id.invoice_id,
+                receivedAt: row.receivedAt || null,
+                invoice: {
+                    invoiceId: row.invoice_id.invoice_id,
+                    orderId: null,
+                    customerCode: row.invoice_id.customer_code,
+                    customerName: row.invoice_id.customer_name || null,
+                    invoiceNo: row.invoice_id.invoice_no,
+                    docNo: row.post_dispatch_plan_id?.doc_no || null,
+                    salesmanId: null,
+                    branchId: null,
+                    invoiceDate: row.invoice_id.invoice_date,
+                    dispatchDate: null,
+                    dueDate: null,
+                    paymentTerms: null,
+                    transactionStatus: null,
+                    paymentStatus: null,
+                    totalAmount: null,
+                    salesType: null,
+                    invoiceType: null,
+                    priceType: null,
+                    vatAmount: null,
+                    grossAmount: null,
+                    discountAmount: null,
+                    netAmount: row.invoice_id.net_amount,
+                    createdBy: null,
+                    createdDate: null,
+                    modifiedBy: null,
+                    modifiedDate: null,
+                    postedBy: null,
+                    postedDate: null,
+                    remarks: null,
+                    isReceipt: null,
+                    isPosted: null,
+                    isDispatched: null,
+                    isRemitted: null,
+                    isReplaced: null,
+                },
+            })),
+        });
     };
 
     const columns: ColumnDef<PendingDetail>[] = React.useMemo(
@@ -219,6 +306,15 @@ export const BulkAcknowledgeModal = ({
                         <Button variant="outline" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
+                        <Button
+                            variant="secondary"
+                            disabled={selectedRows.length === 0}
+                            onClick={handlePrint}
+                            className="gap-2"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Print
+                        </Button>
                         <Button 
                             disabled={selectedRows.length === 0 || !selectedUserId || isAcknowledging}
                             onClick={handleConfirm}
@@ -234,6 +330,17 @@ export const BulkAcknowledgeModal = ({
                     </div>
                 </DialogFooter>
             </DialogContent>
+
+            {printData && (
+                <TransmittalPrintModal
+                    open
+                    onOpenChange={(open) => {
+                        if (!open) setPrintData(null);
+                    }}
+                    header={printData.header}
+                    details={printData.details}
+                />
+            )}
         </Dialog>
     );
 };

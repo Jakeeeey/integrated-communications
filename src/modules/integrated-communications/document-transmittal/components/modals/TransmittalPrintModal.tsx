@@ -65,6 +65,23 @@ export const TransmittalPrintModal: React.FC<TransmittalPrintModalProps> = ({
         }
     };
 
+    const handlePrint = async () => {
+        const doc = await generateTransmittalPDF(header, details);
+        doc.autoPrint();
+
+        const printUrl = URL.createObjectURL(doc.output("blob"));
+        const printWindow = window.open(printUrl, "_blank");
+
+        if (!printWindow) {
+            URL.revokeObjectURL(printUrl);
+            console.error("Unable to open the print dialog. Please allow pop-ups for this site.");
+            return;
+        }
+
+        printWindow.opener = null;
+        window.setTimeout(() => URL.revokeObjectURL(printUrl), 60_000);
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="!max-w-7xl h-[92vh] flex flex-col p-0 overflow-hidden bg-zinc-950 border-zinc-800 shadow-2xl">
@@ -117,6 +134,15 @@ export const TransmittalPrintModal: React.FC<TransmittalPrintModalProps> = ({
                             className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700"
                         >
                             Cancel
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={handlePrint}
+                            disabled={!pdfUrl || isLoading}
+                            className="gap-2"
+                        >
+                            <Printer className="h-4 w-4" />
+                            Print
                         </Button>
                         <Button
                             onClick={handleDownload}
