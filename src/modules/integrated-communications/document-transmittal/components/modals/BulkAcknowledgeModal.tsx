@@ -50,6 +50,11 @@ interface PrintData {
     details: DocumentTransmittalDetail[];
 }
 
+interface PrintData {
+    header: DocumentTransmittalHeader;
+    details: DocumentTransmittalDetail[];
+}
+
 export const BulkAcknowledgeModal = ({
     isOpen,
     onOpenChange,
