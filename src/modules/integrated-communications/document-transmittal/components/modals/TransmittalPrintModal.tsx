@@ -18,13 +18,15 @@ interface TransmittalPrintModalProps {
     onOpenChange: (open: boolean) => void;
     header: DocumentTransmittalHeader;
     details: DocumentTransmittalDetail[];
+    currentUser?: { name: string; email: string };
 }
 
 export const TransmittalPrintModal: React.FC<TransmittalPrintModalProps> = ({
     open,
     onOpenChange,
     header,
-    details
+    details,
+    currentUser
 }) => {
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +34,7 @@ export const TransmittalPrintModal: React.FC<TransmittalPrintModalProps> = ({
     const handleGeneratePreview = useCallback(async () => {
         try {
             setIsLoading(true);
-            const doc = await generateTransmittalPDF(header, details);
+            const doc = await generateTransmittalPDF(header, details, currentUser);
             const blob = doc.output("blob");
             const url = URL.createObjectURL(blob);
             setPdfUrl(url);
@@ -41,7 +43,7 @@ export const TransmittalPrintModal: React.FC<TransmittalPrintModalProps> = ({
         } finally {
             setIsLoading(false);
         }
-    }, [header, details]);
+    }, [header, details, currentUser]);
 
     useEffect(() => {
         if (open) {
@@ -66,7 +68,7 @@ export const TransmittalPrintModal: React.FC<TransmittalPrintModalProps> = ({
     };
 
     const handlePrint = async () => {
-        const doc = await generateTransmittalPDF(header, details);
+        const doc = await generateTransmittalPDF(header, details, currentUser);
         doc.autoPrint();
 
         const printUrl = URL.createObjectURL(doc.output("blob"));
@@ -94,7 +96,7 @@ export const TransmittalPrintModal: React.FC<TransmittalPrintModalProps> = ({
                             <div>
                                 <DialogTitle className="text-xl text-zinc-100">Print Preview</DialogTitle>
                                 <p className="text-sm text-zinc-400">
-                                    {header.documentTransmittalNo || "Draft"} - {details.length} Invoices
+                                    {header.documentTransmittalNo || `DT-${header.id.toString().padStart(5, "0")}`} - {details.length} Invoices
                                 </p>
                             </div>
                         </div>

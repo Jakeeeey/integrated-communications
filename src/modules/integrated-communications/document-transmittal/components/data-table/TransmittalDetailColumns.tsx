@@ -43,13 +43,27 @@ export const getTransmittalDetailColumns = (): ColumnDef<DocumentTransmittalDeta
     },
     {
         accessorKey: "invoice.invoiceNo",
-        id: "invoiceNo",
+        id: "invoice_no_or_doc_no",
         header: "Invoice No.",
         cell: ({ row }) => (
             <span className="font-medium text-foreground">
                 {row.original.invoice.invoiceNo || "N/A"}
             </span>
         ),
+        filterFn: (row, _columnId, filterValue: string) => {
+            if (!filterValue) return true;
+            const search = filterValue.toLowerCase();
+            const invoiceNo = row.original.invoice.invoiceNo?.toLowerCase() || "";
+            const docNo = row.original.invoice.docNo?.toLowerCase() || "";
+            const customerName = row.original.invoice.customerName?.toLowerCase() || "";
+            const customerCode = row.original.invoice.customerCode?.toLowerCase() || "";
+            return (
+                invoiceNo.includes(search) ||
+                docNo.includes(search) ||
+                customerName.includes(search) ||
+                customerCode.includes(search)
+            );
+        },
     },
     {
         accessorKey: "invoice.docNo",

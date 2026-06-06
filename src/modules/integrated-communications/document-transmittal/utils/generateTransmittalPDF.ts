@@ -11,7 +11,8 @@ import QRCode from "qrcode";
  */
 export const generateTransmittalPDF = async (
     header: DocumentTransmittalHeader,
-    details: DocumentTransmittalDetail[]
+    details: DocumentTransmittalDetail[],
+    currentUser?: { name: string; email: string }
 ): Promise<jsPDF> => {
     const doc = new jsPDF({
         orientation: "portrait",
@@ -23,9 +24,10 @@ export const generateTransmittalPDF = async (
     const margin = 15;
 
     // --- Generate QR Code for Transmittal No ---
+    const transmittalNo = header.documentTransmittalNo || (header.id > 0 ? `DT-${header.id.toString().padStart(5, "0")}` : "Draft");
     let qrDataUrl = "";
     try {
-        qrDataUrl = await QRCode.toDataURL(header.documentTransmittalNo || "N/A", {
+        qrDataUrl = await QRCode.toDataURL(transmittalNo, {
             margin: 0,
             scale: 4
         });
@@ -57,7 +59,7 @@ export const generateTransmittalPDF = async (
     const valueX = margin + 38;
 
     const infoRows: [string, string][] = [
-        ["Transmittal No.:", header.documentTransmittalNo || "N/A"],
+        ["Transmittal No.:", transmittalNo],
         ["Date:", formatDateTime(header.createdAt)],
     ];
 
@@ -74,7 +76,7 @@ export const generateTransmittalPDF = async (
     const colMid = pageWidth / 2;
 
     infoY += 2;
-    const senderName = `${header.sender.userFname} ${header.sender.userLname}`;
+    const senderName = currentUser?.name || `${header.sender.userFname} ${header.sender.userLname}`;
     const receiverName = `${header.receiver.userFname} ${header.receiver.userLname}`;
 
     doc.setFont("helvetica", "bold");
@@ -89,6 +91,7 @@ export const generateTransmittalPDF = async (
 
     // --- Table Section ---
     const tableData = details.map((d) => [
+        d.invoice.docNo || "N/A",
         d.invoice.invoiceNo || "N/A",
         d.invoice.invoiceDate ? formatDateTime(d.invoice.invoiceDate) : "N/A",
         d.invoice.customerName || d.invoice.customerCode || "WALK-IN",
@@ -97,7 +100,7 @@ export const generateTransmittalPDF = async (
     autoTable(doc, {
         startY: infoY + 8,
         margin: { left: margin, right: margin },
-        head: [["Invoice No.", "Invoice Date", "Customer Name"]],
+        head: [["Doc No.", "Invoice No.", "Invoice Date", "Customer Name"]],
         body: tableData,
         headStyles: {
             fillColor: false,           // No background fill
@@ -115,9 +118,10 @@ export const generateTransmittalPDF = async (
             lineWidth: 0,               // No cell borders by default
         },
         columnStyles: {
-            0: { cellWidth: 42 },
-            1: { cellWidth: 40 },
-            2: { cellWidth: "auto" },
+            0: { cellWidth: 30 },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 35 },
+            3: { cellWidth: "auto" },
         },
         // Subtle alternate row shading — very light gray, print-friendly
         alternateRowStyles: {
