@@ -42,6 +42,12 @@ interface BulkAcknowledgeModalProps {
     availableUsers: { label: string; value: string }[];
     onBulkAcknowledge: (details: { id: number; headerId: number | null }[], assignedUserId: number) => Promise<boolean>;
     isAcknowledging: boolean;
+    currentUser?: { name: string; email: string };
+}
+
+interface PrintData {
+    header: DocumentTransmittalHeader;
+    details: DocumentTransmittalDetail[];
 }
 
 interface PrintData {
@@ -54,21 +60,30 @@ export const BulkAcknowledgeModal = ({
     onOpenChange,
     availableUsers,
     onBulkAcknowledge,
-    isAcknowledging
+    isAcknowledging,
+    currentUser,
 }: BulkAcknowledgeModalProps) => {
     const [isLoading, setIsLoading] = useState(false);
     const [pendingDetails, setPendingDetails] = useState<PendingDetail[]>([]);
     const [selectedRows, setSelectedRows] = useState<PendingDetail[]>([]);
     const [selectedUserId, setSelectedUserId] = useState<string>("");
     const [printData, setPrintData] = useState<PrintData | null>(null);
+    const [nextTransmittalNo, setNextTransmittalNo] = useState<string | null>(null);
 
     const fetchPending = useCallback(async () => {
         setIsLoading(true);
         try {
-            const res = await fetch("/api/ic/document-transmittal/pending");
-            const data = await res.json();
-            if (data.success) {
-                setPendingDetails(data.data);
+            const [pendingRes, nextNoRes] = await Promise.all([
+                fetch("/api/ic/document-transmittal/pending"),
+                fetch("/api/ic/document-transmittal/next-no"),
+            ]);
+            const pendingData = await pendingRes.json();
+            if (pendingData.success) {
+                setPendingDetails(pendingData.data);
+            }
+            const nextNoData = await nextNoRes.json();
+            if (nextNoData.success) {
+                setNextTransmittalNo(nextNoData.data);
             }
         } catch (error) {
             console.error("Failed to fetch pending details", error);
@@ -110,19 +125,24 @@ export const BulkAcknowledgeModal = ({
             selectedReceiver?.label || "Not selected"
         ).split(" ");
 
+        // Parse currentUser name into fname/lname
+        const senderParts = (currentUser?.name || "User").split(" ");
+        const senderFname = senderParts[0] || "User";
+        const senderLname = senderParts.slice(1).join(" ") || "";
+
         setPrintData({
             header: {
                 id: 0,
-                documentTransmittalNo: null,
+                documentTransmittalNo: nextTransmittalNo,
                 senderId: 0,
                 receiverId: selectedUserId ? Number(selectedUserId) : 0,
                 createdAt: new Date().toISOString(),
                 receivedAt: null,
                 sender: {
                     userId: 0,
-                    userFname: "Current",
+                    userFname: senderFname,
                     userMname: null,
-                    userLname: "User",
+                    userLname: senderLname,
                 },
                 receiver: {
                     userId: selectedUserId ? Number(selectedUserId) : 0,
@@ -213,7 +233,22 @@ export const BulkAcknowledgeModal = ({
             },
             {
                 accessorKey: "invoice_id.invoice_no",
+                id: "invoice_no_or_doc_no",
                 header: "Invoice No.",
+                filterFn: (row, _columnId, filterValue: string) => {
+                    if (!filterValue) return true;
+                    const search = filterValue.toLowerCase();
+                    const invoiceNo = row.original.invoice_id?.invoice_no?.toLowerCase() || "";
+                    const docNo = row.original.post_dispatch_plan_id?.doc_no?.toLowerCase() || "";
+                    const customerName = row.original.invoice_id?.customer_name?.toLowerCase() || "";
+                    const customerCode = row.original.invoice_id?.customer_code?.toLowerCase() || "";
+                    return (
+                        invoiceNo.includes(search) ||
+                        docNo.includes(search) ||
+                        customerName.includes(search) ||
+                        customerCode.includes(search)
+                    );
+                },
             },
             {
                 accessorKey: "post_dispatch_plan_id.doc_no",
@@ -291,7 +326,7 @@ export const BulkAcknowledgeModal = ({
                             columns={columns}
                             data={pendingDetails}
                             isLoading={isLoading}
-                            searchKey="invoice_id_invoice_no"
+                            searchKey="invoice_no_or_doc_no"
                             emptyTitle="No pending invoices"
                             emptyDescription="The pending queue is currently empty."
                         />
@@ -339,6 +374,7 @@ export const BulkAcknowledgeModal = ({
                     }}
                     header={printData.header}
                     details={printData.details}
+                    currentUser={currentUser}
                 />
             )}
         </Dialog>

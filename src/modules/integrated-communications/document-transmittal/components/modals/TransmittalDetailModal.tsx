@@ -26,6 +26,7 @@ interface TransmittalDetailModalProps {
     isLoading: boolean;
     onAcknowledge: (id: number, detailIds: number[], assignedUserId: number, originalReceiverId: number) => Promise<boolean>;
     isAcknowledging: boolean;
+    currentUser?: { name: string; email: string };
 }
 
 export const TransmittalDetailModal = ({
@@ -37,6 +38,7 @@ export const TransmittalDetailModal = ({
     isLoading,
     onAcknowledge,
     isAcknowledging,
+    currentUser,
 }: TransmittalDetailModalProps) => {
     const [selectedRows, setSelectedRows] = useState<DocumentTransmittalDetail[]>([]);
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -148,7 +150,7 @@ export const TransmittalDetailModal = ({
                             data={details}
                             isLoading={isLoading}
                             onSelectionChange={handleSelectionChange}
-                            searchKey="invoiceNo"
+                            searchKey="invoice_no_or_doc_no"
                             emptyTitle="No invoices found"
                             emptyDescription="This transmittal doesn't contain any invoice records."
                         />
@@ -217,6 +219,7 @@ export const TransmittalDetailModal = ({
                     onOpenChange={setIsPrintModalOpen}
                     header={header}
                     details={details}
+                    currentUser={currentUser}
                 />
             )}
         </Dialog>

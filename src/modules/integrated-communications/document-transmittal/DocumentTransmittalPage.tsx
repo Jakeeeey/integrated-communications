@@ -16,7 +16,7 @@ import { DocumentTransmittalFilterProvider } from "./context/DocumentTransmittal
  * src/modules/integrated-communications/document-transmittal/DocumentTransmittalPage.tsx
  * Main content component that consumes hooks and context.
  */
-function DocumentTransmittalContent() {
+function DocumentTransmittalContent({ currentUser }: { currentUser?: { name: string; email: string } }) {
     const {
         transmittals,
         isLoading,
@@ -114,6 +114,7 @@ function DocumentTransmittalContent() {
                 isLoading={isDetailLoading}
                 onAcknowledge={handleAcknowledge}
                 isAcknowledging={isAcknowledging}
+                currentUser={currentUser}
             />
 
             {/* Global Bulk Acknowledge Modal */}
@@ -123,6 +124,7 @@ function DocumentTransmittalContent() {
                 onBulkAcknowledge={handleBulkAcknowledge}
                 isAcknowledging={isBulkAcknowledging}
                 availableUsers={allUsers}
+                currentUser={currentUser}
             />
         </div>
     );
@@ -131,10 +133,10 @@ function DocumentTransmittalContent() {
 /**
  * Main entry point wrapped with necessary providers.
  */
-export default function DocumentTransmittalPage() {
+export default function DocumentTransmittalPage({ currentUser }: { currentUser?: { name: string; email: string } }) {
     return (
         <DocumentTransmittalFilterProvider>
-            <DocumentTransmittalContent />
+            <DocumentTransmittalContent currentUser={currentUser} />
         </DocumentTransmittalFilterProvider>
     );
 }
