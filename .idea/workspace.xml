@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="a978ae80-5107-46e6-9e25-d7dabeb6fdbe" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,7 +47,7 @@
   "keyToString": {
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/Admin/Desktop/vos-web-v2-systems/supply-chain-management",
+    "last_opened_file_path": "C:/Users/Admin/Desktop/vos-web-v2-systems/financial-management",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -176,6 +175,8 @@
       <workItem from="1777962224178" duration="628000" />
       <workItem from="1778234875938" duration="770000" />
       <workItem from="1778302141758" duration="892000" />
+      <workItem from="1780738370537" duration="72000" />
+      <workItem from="1781003642075" duration="184000" />
     </task>
     <servers />
   </component>
